@@ -2,7 +2,7 @@ import numpy as np
 import numpy.linalg as LA
 from scipy.linalg import block_diag, solve_triangular
 
-from relu_utils import sample_D_matrices
+from relu_utils import sample_D_matrices, squared_loss, classifcation_accuracy
 
 """
 ReLU solver using ADMM. Implements Algorithm 3.1 of ADMM ReLU Paper.
@@ -17,25 +17,39 @@ class Approximate_ReLU_ADMM_Solver():
     :param rho - fixed penalty parameter (rho > 0)
     :param step - step size constant (step > 0)
     :param beta - augmented lagrangian constant (beta > 0)
+    :param bias - True to include bias to weights in first layer
+    :param loss_func - function in the form l(y_hat, y) that computes a loss
+    :param acc_func - function in the form a(y_hat, y) to compute accuracy of predictions
     """
     def __init__(self, 
                  m,
-                 d,
                  P_S, 
                  rho=1e-5,
                  step=1e-5,
                  beta=1e-5,
+                 bias=True,
+                 loss_func = squared_loss,
+                 acc_func = classifcation_accuracy,
                  ):
         self.m = m
-        self.d = d
         self.P_S = P_S
         self.rho = rho
         self.step = step
         self.beta = beta
+        self.bias = bias
+        self.loss_func = loss_func
+        self.acc_func = acc_func
+        self.d = None
 
-        # final weights of optimized network
-        self.u = np.zeros((m,d))
-        self.alpha = np.zeros((m,1))
+        # optimal weights of C-ReLU
+        self.v = None
+        self.w = None
+        # for forming D matrices as diag([X h >= 0])
+        self.h = None
+
+        # optimal weights of NC-ReLU
+        self.u = None
+        self.alpha = None
 
         # flag to ensure predictions only enabled after optimization called
         self.optimized = False
@@ -47,24 +61,30 @@ class Approximate_ReLU_ADMM_Solver():
     :param y - Training labels (d x 1)
     :param max_iter (optional) - max iterations for ADMM algorithm
     """
-    def optimize(self, X, y, max_iter=100):
+    def optimize(self, X, y, max_iter=100, verbose=False):
 
         assert len(X.shape) == 2, "X must be 2 dimensional"
-
         if len(y.shape) == 1:
             y = y[:,None]
-        assert len(y.shape) ==2, "Y must be either 1D or 2D"
+        assert len(y.shape) == 2, "Y must be either 1D or 2D"
 
-        n,d = X.shape
+        n, d = X.shape
         P_S = self.P_S
         r = LA.matrix_rank(X)
 
         # add bias term to data
-        X = np.hstack([X, np.ones((n,1))])
-        d += 1
+        if self.bias:
+            X = np.hstack([X, np.ones((n,1))])
+            d += 1
+
+        # prepare final weights of optimized network
+        self.d = d
+        self.u = np.zeros((self.m,self.d))
+        self.alpha = np.zeros((self.m,1))
 
         # sample d matrices
-        d_diags = sample_D_matrices(X, P_S)
+        d_diags, h = sample_D_matrices(X, P_S)
+        self.h = h
 
         # F here is n x (2d*P_S)
         F = np.hstack([np.hstack([np.diag(d_diags[:,i]) @ X for i in range(P_S)]),
@@ -105,9 +125,18 @@ class Approximate_ReLU_ADMM_Solver():
 
         ## ITERATIVE UPDATES 
 
+        # keep track of losses
+        train_loss, train_acc = [], []
+
         k = 0 
         while k < max_iter:
-            print(f"iter = {k}, loss = (TODO: add)")
+
+            # keep track of losses
+            y_hat = F @ u
+            train_loss.append(self.loss_func(y_hat, y))
+            train_acc.append(self.acc_func(y_hat, y))
+            if verbose: print(f"iter = {k}, loss = {train_loss[-1]}, acc = {train_acc[-1]}")
+
             # first, conduct the primal update on u (u1...uP, z1...zP)
             b = b_1 + v - lam + G.T @ (s - nu)
             bhat = solve_triangular(L, b, lower=True)
@@ -129,35 +158,16 @@ class Approximate_ReLU_ADMM_Solver():
             # iter step 
             k += 1
 
-        ### RECOVER OPTIMAL WEIGHTS
+        # Optimal Weights v1...vP_S w1...wP_S of C-ReLU Problem
+        self.v = v.reshape((P_S*2, d))[:P_S]
+        self.w = v.reshape((P_S*2, d))[P_S:P_S*2]
 
-        # recover u1.... u_ms and alpha1 ... alpha_ms
-        v_star = v.reshape((P_S*2, d))[:P_S]
-        w_star = v.reshape((P_S*2, d))[P_S:P_S*2]
-        # critical number of neurons 
-        mstar = np.sum(~ np.isclose(LA.norm(v_star, axis=1), 0)) + np.sum(~ np.isclose(LA.norm(w_star, axis=1), 0))
-
-        if self.m > mstar:
-            print("m > mstar. Network guranteed not optimal.")
-
-        j = 0
-        for i in range(P_S):
-            if not np.isclose(LA.norm(v_star[i]), 0):
-                self.u[j] = v_star[i] / np.sqrt(LA.norm(v_star[i]))
-                self.alpha[j] = np.sqrt(LA.norm(v_star[i]))
-                j += 1
-            if j == self.m: break
-        for i in range(P_S):
-            if not np.isclose(LA.norm(w_star[i]), 0):
-                self.u[j] = w_star[i] / np.sqrt(LA.norm(w_star[i]))
-                self.alpha[j] = - np.sqrt(LA.norm(w_star[i]))
-                j += 1
-            if j == self.m: break
-
-        print(f"Network has {j} nonzero neurons.")
+        # recover u1.... u_ms and alpha1 ... alpha_ms as Optimal Weights of NC-ReLU Problem
+        self._optimal_weights_transform()
 
         self.optimized = True
-
+        self.train_loss = np.array(train_loss)
+        self.train_acc = np.array(train_acc)
 
     """
     Predict classes given new data X
@@ -165,22 +175,68 @@ class Approximate_ReLU_ADMM_Solver():
     :param X - Evaluation data (n x d)
     :param max_iter (optional) - max iterations for ADMM algorithm
     """
-    def predict(self, X):
+    def predict(self, X, weights="C-ReLU"):
 
         assert self.optimized is True, "Must call .optimize() before applying predictions."
         assert len(X.shape) == 2, "X must be 2 dimensional array"
-        assert X.shape[1] == self.d, "X must have same feature size as trained data"
+        assert X.shape[1] == self.d - int(self.bias), f"X must have same feature size as trained data (d={self.d - int(self.bias)})"
+        assert weights in ["NC-ReLU", "C-ReLU"], f"Weights options are either \"NC-ReLU\" for weights of non-convex problem, or \"C-ReLU\" for weights of convex problem"
         
         # add bias term to data
         n, d = X.shape
-        X = np.hstack([X, np.ones((n,1))])
+        if self.bias:
+            X = np.hstack([X, np.ones((n,1))])
 
-        # prediction
         y_hat = np.zeros((n,1))
-        for j in range(self.m):
-            y_hat += np.clip(X @ self.u[j], 0, np.inf) * self.alpha[j]
+        
+        # prediction using weights for equivalent nonconvex problem
+        if weights == "NC-ReLU": 
+            for j in range(self.m):
+                y_hat += np.clip(X @ self.u[j][:,None], 0, np.inf) * self.alpha[j]
+        # prediction using weights for solved convex problem
+        elif weights == "C-ReLU": 
+            for i in range(self.P_S):
+                D_i = np.diag(X @ self.h[:,i] >= 0).astype('float')
+                y_hat += D_i @ X @ (self.v[i][:,None] - self.w[i][:,None])
+        else:
+            raise NotImplementedError
 
         return y_hat
+    
+    """
+    Given optimal v^*, w^* of convex problem (Eq (2.1)), derive the optimal weights u^*, alpha^* of the non-convex probllem (Eq (2.1))
+    Applies Theorem 1 of Pilanci, Ergen 2020
+    TODO: fix function. I don't think its behaving the way it should
+    - what is 1i and 2i indices of Theorem 1?
+    """
+    def _optimal_weights_transform(self):
+
+        assert self.v is not None
+        assert self.w is not None
+
+        # critical number of neurons 
+        mstar = np.sum(~ np.isclose(LA.norm(self.v, axis=1), 0)) + np.sum(~ np.isclose(LA.norm(self.w, axis=1), 0))
+        if self.m > mstar:
+            print("m > mstar. Network guranteed not optimal.")
+
+        i,j = 0,0
+        while i < self.P_S and j < self.m:
+            if not np.isclose(LA.norm(self.v[i]), 0):
+                self.u[j] = self.v[i] / np.sqrt(LA.norm(self.v[i]))
+                self.alpha[j] = np.sqrt(LA.norm(self.v[i]))
+                j += 1
+            i += 1
+        i = 0
+        while i < self.P_S and j < self.m:
+            if not np.isclose(LA.norm(self.w[i]), 0):
+                self.u[j] = self.w[i] / np.sqrt(LA.norm(self.w[i]))
+                self.alpha[j] = - np.sqrt(LA.norm(self.w[i]))
+                j += 1
+            i += 1
+
+        print(f"Network of width {self.m} has {j} nonzero neurons for non-convex weights.")
+
+
     
        
 
