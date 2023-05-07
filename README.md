@@ -3,17 +3,28 @@ Convex Reformulation of ANN ReLU problem with GPU Acceleration
 
 ### Todo List
 
-Before Midterm Report (4/15)
-- [ ] Read Paper: [Efficient Global Optimization of Two-layer ReLU Networks: Quadratic-time
+Zach Todo List (Due Sunday)
+- [x] Read Paper Sections 3 (up to 3.2.2): [Efficient Global Optimization of Two-layer ReLU Networks: Quadratic-time
 Algorithms and Adversarial Training](https://arxiv.org/pdf/2201.01965.pdf)
-- [ ] Implement Exact ADMM solver for Two-layer ReLU (Algo 3.1) - Zach *Due Sunday*
+- [x] Implement Algo 3.1 of Paper (Approximate ADMM solver)
+
+M00 Todo List (Due Wednesday Night)
+- [ ] Read Paper Sections 3 (up to 3.2.2): [Efficient Global Optimization of Two-layer ReLU Networks: Quadratic-time
+Algorithms and Adversarial Training](https://arxiv.org/pdf/2201.01965.pdf)
+- [ ] Implement Baby SCNN to get baseline
+- [ ] Fix zach's bad baby optimizer to match results of baseline
+
+Before Midterm Report (4/15)
 - [ ] Test against PyTorch on problem with known exact solution (MNIST subset with 100% accuracy easy and possible) - Zach *Due Sunday*
-- [ ] Implement Approximate ADMM solver - Miria *Due Friday*
-- [ ] Test solver - Miria *Due Friday*
-- [ ] Test exact and approximate ADMM solvers against more baselines (CVX, scnn-fista, PyTorch) - Daniel? 
-- [ ] Summarize results in writeup 
+- [ ] Improve time complexity of Ax = b
+    - [ ] Try other pre-conditioners besides Cholesky for linear sys solving (Miria)
+    - [ ] Conjugate Gradient steps to solve (Daniel) 
+- [ ] Summarize results in midterm writeup 
 
 For Final Project 
-- [ ] Accelerate solvers with GPUs 
+- [ ] GPU Acceleration
+    - [ ] Hook up to JAX
+    - [ ] Perf tests to demonstrate speedup 
+- [ ] Test exact and approximate ADMM solvers against more baselines (CVX, scnn-fista, PyTorch)
 - [ ] Scale problem to CIFAR-10 classification, test against baselines
 - [ ] Test for other problems with structure, where numerical acceleration may be possible and present 
