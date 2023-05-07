@@ -63,6 +63,8 @@ class Approximate_ReLU_ADMM_Solver():
     """
     def optimize(self, X, y, max_iter=100, verbose=False):
 
+        # TODO: Normalize X? 
+
         assert len(X.shape) == 2, "X must be 2 dimensional"
         if len(y.shape) == 1:
             y = y[:,None]
@@ -83,6 +85,7 @@ class Approximate_ReLU_ADMM_Solver():
         self.alpha = np.zeros((self.m,1))
 
         # sample d matrices
+        # TODO: sample diags with np.random.choice if X is standard normal 
         d_diags, h = sample_D_matrices(X, P_S)
         self.h = h
 
