@@ -42,6 +42,7 @@ class Approximate_ReLU_ADMM_Solver():
         self.loss_func = loss_func
         self.acc_func = acc_func
         self.d = None
+        self.use_cvxpy = use_cvxpy
 
         # optimal weights of C-ReLU
         self.v = None
@@ -91,7 +92,7 @@ class Approximate_ReLU_ADMM_Solver():
         d_diags, h = sample_D_matrices(X, P_S)
         self.h = h
 
-        if use_cvxpy:
+        if self.use_cvxpy:
             import cvxpy as cp
             
             # Variables
