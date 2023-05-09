@@ -20,6 +20,7 @@ class Approximate_ReLU_ADMM_Solver():
     :param bias - True to include bias to weights in first layer
     :param loss_func - function in the form l(y_hat, y) that computes a loss
     :param acc_func - function in the form a(y_hat, y) to compute accuracy of predictions
+    :param use_cvxpy - helpful to debug against the CVXPY implimentation. Defaults to False.
     """
     def __init__(self, 
                  m,
@@ -30,6 +31,7 @@ class Approximate_ReLU_ADMM_Solver():
                  bias=True,
                  loss_func = squared_loss,
                  acc_func = classifcation_accuracy,
+                 use_cvxpy = False,
                  ):
         self.m = m
         self.P_S = P_S
@@ -89,81 +91,117 @@ class Approximate_ReLU_ADMM_Solver():
         d_diags, h = sample_D_matrices(X, P_S)
         self.h = h
 
-        # F here is n x (2d*P_S)
-        F = np.hstack([np.hstack([np.diag(d_diags[:,i]) @ X for i in range(P_S)]),
-            np.hstack([-np.diag(d_diags[:,i]) @ X for i in range(P_S)[::-1]])])
+        if use_cvxpy:
+            import cvxpy as cp
+            
+            # Variables
+            v = cp.Variable((d * P_S))
+            w = cp.Variable((d * P_S))
+            
+            # Construct all possible data enumerations (n x P_S * d)
+            F = np.hstack([d_diags[:, i, None] * X for i in range(P_S)])
 
-        # G is block diagonal 2*n*P_S x 2*d*P_s
-        Glist = [(2 * np.diag(d_diags[:,i]) - np.eye(n)) @ X for i in range(P_S)]
-        G = block_diag(*Glist * 2)
+            # Objective Function
+            def obj_func(F, y, v, w):
+                l2_term = cp.sum_squares(
+                    (F @ (v - w)) - y[:, 0]
+                )
+                group_sparsity = 0
+                for i in range(P_S):
+                    group_sparsity += cp.norm2(v[i*d:(i+1)*d])
+                    group_sparsity += cp.norm2(w[i*d:(i+1)*d])
 
-        ### INITIALIZATIONS OF OPTIMIZATION VARIABLES 
+                return l2_term + self.beta * group_sparsity
+            
+            # Solve via cvxpy
+            prob = cp.Problem(cp.Minimize(obj_func(F, y, v, w)),
+                              [((2 * d_diags[:, i, None] - 1) * X) @ v[i*d:(i+1)*d] >= 0 for i in range(P_S)] + \
+                              [((2 * d_diags[:, i, None] - 1) * X) @ w[i*d:(i+1)*d] >= 0 for i in range(P_S)])
+            prob.solve()
+            
+            # Grab optimal values 
+            self.v = np.reshape(v.value, (P_S, d), order='C')
+            self.w = np.reshape(w.value, (P_S, d), order='C')
+            train_loss = [0] * max_iter
+            train_acc = [0] * max_iter
 
-        # u contains u1 ... uP, z1... zP in one long vector
-        u = np.zeros((2 * d * P_S, 1))
-        # v contrains v1 ... vP, w1 ... wP in one long vector
-        v = np.zeros((2 * d * P_S, 1))
+        else:
 
-        # slacks s1 ... sP, t1 ... tP
-        s = np.zeros((2 * n * P_S, 1))
-        for i in range(P_S):
-            # s_i = G_i v_i
-            s[i*n:(i+1)*n] = Glist[i] @ v[i*d:(i+1)*d]
-            s[(i+P_S)*n:(i+P_S+1)*n] = Glist[i] @ v[(i+P_S)*d:(i+P_S+1)*d]
+            # F here is n x (2d*P_S)
+            F = np.hstack([np.hstack([np.diag(d_diags[:,i]) @ X for i in range(P_S)]),
+                np.hstack([-np.diag(d_diags[:,i]) @ X for i in range(P_S)[::-1]])])
 
-        # dual variables
-        # lam contains lam11 lam12 ... lam1P lam21 lam22 ... lam2P
-        lam = np.zeros((2 * d * P_S, 1))
-        # nu contains nu11 nu12 ... nu1P nu21 nu22 ... nu2P
-        nu = np.zeros((2 * n * P_S, 1))
+            # G is block diagonal 2*n*P_S x 2*d*P_s
+            Glist = [(2 * np.diag(d_diags[:,i]) - np.eye(n)) @ X for i in range(P_S)]
+            G = block_diag(*Glist * 2)
 
-        ### PRECOMPUTATIONS
+            ### INITIALIZATIONS OF OPTIMIZATION VARIABLES 
 
-        # for u update: A in 2dP_s x 2dP_s
-        A = np.eye(2*d*P_S) + F.T @ F / self.rho + G.T @ G
-        # cholesky factorization
-        L = LA.cholesky(A)
-        # extra precompute for u update step
-        b_1 = F.T @ y / self.rho
+            # u contains u1 ... uP, z1... zP in one long vector
+            u = np.zeros((2 * d * P_S, 1))
+            # v contrains v1 ... vP, w1 ... wP in one long vector
+            v = np.zeros((2 * d * P_S, 1))
 
-        ## ITERATIVE UPDATES 
+            # slacks s1 ... sP, t1 ... tP
+            s = np.zeros((2 * n * P_S, 1))
+            for i in range(P_S):
+                # s_i = G_i v_i
+                s[i*n:(i+1)*n] = Glist[i] @ v[i*d:(i+1)*d]
+                s[(i+P_S)*n:(i+P_S+1)*n] = Glist[i] @ v[(i+P_S)*d:(i+P_S+1)*d]
 
-        # keep track of losses
-        train_loss, train_acc = [], []
+            # dual variables
+            # lam contains lam11 lam12 ... lam1P lam21 lam22 ... lam2P
+            lam = np.zeros((2 * d * P_S, 1))
+            # nu contains nu11 nu12 ... nu1P nu21 nu22 ... nu2P
+            nu = np.zeros((2 * n * P_S, 1))
 
-        k = 0 
-        while k < max_iter:
+            ### PRECOMPUTATIONS
+
+            # for u update: A in 2dP_s x 2dP_s
+            A = np.eye(2*d*P_S) + F.T @ F / self.rho + G.T @ G
+            # cholesky factorization
+            L = LA.cholesky(A)
+            # extra precompute for u update step
+            b_1 = F.T @ y / self.rho
+
+            ## ITERATIVE UPDATES 
 
             # keep track of losses
-            y_hat = F @ u
-            train_loss.append(self.loss_func(y_hat, y))
-            train_acc.append(self.acc_func(y_hat, y))
-            if verbose: print(f"iter = {k}, loss = {train_loss[-1]}, acc = {train_acc[-1]}")
+            train_loss, train_acc = [], []
 
-            # first, conduct the primal update on u (u1...uP, z1...zP)
-            b = b_1 + v - lam + G.T @ (s - nu)
-            bhat = solve_triangular(L, b, lower=True)
-            u = solve_triangular(L.T, bhat, lower=False)
+            k = 0 
+            while k < max_iter:
 
-            # second, perform updates of v and s (TODO: parallelize v and s updates)
-            # upates on v = (v1...vP, w1...wP)
-            for i in range(2 * P_S):
-                inds = np.arange(d*i, d*(i+1))
-                v[inds] = np.maximum(1 - self.beta/(self.rho * LA.norm(u[inds] + lam[inds])), 0) * (u[inds] + lam[inds])
-            # updates on s = (s1...sP, t1...tP)
-            for i in range(2 * P_S):
-                s[i*n:(i+1)*n] = np.maximum(Glist[i % P_S] @ u[i*d:(i+1)*d] + nu[i*n:(i+1)*n], 0)
+                # keep track of losses
+                y_hat = F @ u
+                train_loss.append(self.loss_func(y_hat, y))
+                train_acc.append(self.acc_func(y_hat, y))
+                if verbose: print(f"iter = {k}, loss = {train_loss[-1]}, acc = {train_acc[-1]}")
 
-            # finally, perform dual updates
-            lam += self.step / self.rho * (u - v)
-            nu += self.step / self.rho * (G @ u - s)
+                # first, conduct the primal update on u (u1...uP, z1...zP)
+                b = b_1 + v - lam + G.T @ (s - nu)
+                bhat = solve_triangular(L, b, lower=True)
+                u = solve_triangular(L.T, bhat, lower=False)
 
-            # iter step 
-            k += 1
+                # second, perform updates of v and s (TODO: parallelize v and s updates)
+                # upates on v = (v1...vP, w1...wP)
+                for i in range(2 * P_S):
+                    inds = np.arange(d*i, d*(i+1))
+                    v[inds] = np.maximum(1 - self.beta/(self.rho * LA.norm(u[inds] + lam[inds])), 0) * (u[inds] + lam[inds])
+                # updates on s = (s1...sP, t1...tP)
+                for i in range(2 * P_S):
+                    s[i*n:(i+1)*n] = np.maximum(Glist[i % P_S] @ u[i*d:(i+1)*d] + nu[i*n:(i+1)*n], 0)
 
-        # Optimal Weights v1...vP_S w1...wP_S of C-ReLU Problem
-        self.v = v.reshape((P_S*2, d))[:P_S]
-        self.w = v.reshape((P_S*2, d))[P_S:P_S*2]
+                # finally, perform dual updates
+                lam += self.step / self.rho * (u - v)
+                nu += self.step / self.rho * (G @ u - s)
+
+                # iter step 
+                k += 1        
+
+            # Optimal Weights v1...vP_S w1...wP_S of C-ReLU Problem
+            self.v = v.reshape((P_S*2, d))[:P_S]
+            self.w = v.reshape((P_S*2, d))[P_S:P_S*2]
 
         # recover u1.... u_ms and alpha1 ... alpha_ms as Optimal Weights of NC-ReLU Problem
         self._optimal_weights_transform()
