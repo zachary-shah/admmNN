@@ -32,6 +32,7 @@ class Approximate_ReLU_ADMM_Solver():
                  loss_func = squared_loss,
                  acc_func = classifcation_accuracy,
                  use_cvxpy = False,
+                 seed=-1,
                  ):
         self.m = m
         self.P_S = P_S
@@ -43,6 +44,7 @@ class Approximate_ReLU_ADMM_Solver():
         self.acc_func = acc_func
         self.d = None
         self.use_cvxpy = use_cvxpy
+        self.seed = seed
 
         # optimal weights of C-ReLU
         self.v = None
@@ -89,7 +91,7 @@ class Approximate_ReLU_ADMM_Solver():
 
         # sample d matrices
         # TODO: sample diags with np.random.choice if X is standard normal 
-        d_diags, h = sample_D_matrices(X, P_S)
+        d_diags, h = sample_D_matrices(X, P_S, seed=self.seed)
         self.h = h
 
         if self.use_cvxpy:
@@ -129,11 +131,11 @@ class Approximate_ReLU_ADMM_Solver():
         else:
 
             # F here is n x (2d*P_S)
-            F = np.hstack([np.hstack([np.diag(d_diags[:,i]) @ X for i in range(P_S)]),
-                np.hstack([-np.diag(d_diags[:,i]) @ X for i in range(P_S)[::-1]])])
+            F = np.hstack([np.hstack([d_diags[:,i, None] * X for i in range(P_S)]),
+                np.hstack([-1 * d_diags[:,i, None] * X for i in range(P_S)])])
 
             # G is block diagonal 2*n*P_S x 2*d*P_s
-            Glist = [(2 * np.diag(d_diags[:,i]) - np.eye(n)) @ X for i in range(P_S)]
+            Glist = [(2 * d_diags[:, i, None] - 1) * X for i in range(P_S)]
             G = block_diag(*Glist * 2)
 
             ### INITIALIZATIONS OF OPTIMIZATION VARIABLES 
@@ -177,7 +179,7 @@ class Approximate_ReLU_ADMM_Solver():
                 y_hat = F @ u
                 train_loss.append(self.loss_func(y_hat, y))
                 train_acc.append(self.acc_func(y_hat, y))
-                if verbose: print(f"iter = {k}, loss = {train_loss[-1]}, acc = {train_acc[-1]}")
+                if verbose and k%10 == 0: print(f"iter = {k}, loss = {train_loss[-1]}, acc = {train_acc[-1]}")
 
                 # first, conduct the primal update on u (u1...uP, z1...zP)
                 b = b_1 + v - lam + G.T @ (s - nu)
@@ -201,8 +203,24 @@ class Approximate_ReLU_ADMM_Solver():
                 k += 1        
 
             # Optimal Weights v1...vP_S w1...wP_S of C-ReLU Problem
-            self.v = v.reshape((P_S*2, d))[:P_S]
-            self.w = v.reshape((P_S*2, d))[P_S:P_S*2]
+            opt_weights = np.reshape(v, (P_S*2, d), order='C')
+            self.v = opt_weights[:P_S]
+            self.w = opt_weights[P_S:P_S*2]
+
+            # i = 0
+            # print(v[i*d:(i+1)*d])
+            # print(self.v[i][:,None])
+            # print(v[(i+P_S)*d:(i+P_S+1)*d])
+            # print(self.w[i][:,None])
+
+
+            # y_hat = F @ v
+            # print(f"Final loss with v: {self.loss_func(y_hat, y)}")
+            # print(f"Final acc with v: {self.acc_func(y_hat, y)}")
+
+            # y_hat = F @ u
+            # print(f"Final loss with u: {self.loss_func(y_hat, y)}")
+            # print(f"Final acc with u: {self.acc_func(y_hat, y)}")
 
         # recover u1.... u_ms and alpha1 ... alpha_ms as Optimal Weights of NC-ReLU Problem
         self._optimal_weights_transform()
@@ -237,9 +255,10 @@ class Approximate_ReLU_ADMM_Solver():
                 y_hat += np.clip(X @ self.u[j][:,None], 0, np.inf) * self.alpha[j]
         # prediction using weights for solved convex problem
         elif weights == "C-ReLU": 
+            d_diags = (X @ self.h >= 0).astype('float')
             for i in range(self.P_S):
-                D_i = np.diag(X @ self.h[:,i] >= 0).astype('float')
-                y_hat += D_i @ X @ (self.v[i][:,None] - self.w[i][:,None])
+                y_hat += (d_diags[:,i, None] * X) @ (self.v[i][:,None] - self.w[i][:,None])
+            
         else:
             raise NotImplementedError
 

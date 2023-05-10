@@ -9,8 +9,11 @@ Some random functions we will need to implement better / improve through the pro
 Function to sample D_i matrices given training data X, and number of samples P desired
 return: a n x P matrix, where each column i is the diagonal entries for D_i
 """
-def sample_D_matrices(X, P): #TODO: add typing
+def sample_D_matrices(X, P, seed=-1): #TODO: add typing
      
+    if seed > 0:
+        np.random.seed(seed)
+
     n,d = X.shape
 
     # sample randomly iid
