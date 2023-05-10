@@ -6,23 +6,38 @@ Some random functions we will need to implement better / improve through the pro
 """
 
 """
-Function to sample D_i matrices given training data X, and number of samples P desired
-return: a n x P matrix, where each column i is the diagonal entries for D_i
+Function to sample h_i vectors which create D_i = I(X @ h_i >= 0) matrices given training data X, and number of samples P desired
+return: a d x P matrix, where each column i is the random vector h_i
 """
-def sample_D_matrices(X, P, seed=-1): #TODO: add typing
+def sample_activation_vectors(X, P, 
+                     seed=-1,
+                     dist='normal'): #TODO: add typing
      
+    assert dist in ['unif', 'normal'], "Sampling must be one of \'unif\', \'normal\'."
+
     if seed > 0:
         np.random.seed(seed)
 
     n,d = X.shape
 
-    # sample randomly iid
-    h = np.random.randn(d, P)
+    if dist == 'normal':
+        h = np.random.randn(d, P)
+    elif dist == 'unif':
+        h = np.random.rand(d, P)
+
+    return h
+
+
+"""
+Function to sample diagonals of D_i matrices given training data X, and random vectors h
+return: a n x P matrix, where each column i is the diagonal entries for D_i
+"""
+def get_hyperplane_cuts(X, h): #TODO: add typing
+
     d_diags = X @ h >= 0
+    d_diags.astype("float")
 
-    # TODO: assert that no duplicate columns
-
-    return d_diags.astype("float"), h
+    return d_diags
 
 
 """
