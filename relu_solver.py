@@ -4,7 +4,7 @@ from sklearn.preprocessing import StandardScaler
 from time import perf_counter
 
 from relu_utils import sample_activation_vectors, get_hyperplane_cuts, squared_loss, classifcation_accuracy
-from optimizers import IMPLEMENTED_OPTIMIZERS, cvxpy_optimizer, admm_optimizer
+from optimizers import IMPLEMENTED_OPTIMIZERS, cvxpy_optimizer, admm_optimizer, admm_optimizer_linop
 
 """
 Shell structure for 2 Layer Convex ReLU Solver
@@ -111,7 +111,8 @@ class Approximate_2_Layer_ReLU():
 
         elif self.optimizer == "admm":
 
-            self = admm_optimizer(self, X, y, max_iter, verbose=verbose)
+            # self = admm_optimizer(self, X, y, max_iter, verbose=verbose)
+            self = admm_optimizer_linop(self, X, y, max_iter, verbose=verbose)
 
         else:
             raise NotImplementedError
