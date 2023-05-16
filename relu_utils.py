@@ -65,6 +65,21 @@ def classifcation_accuracy(y_hat, y):
         y = y.reshape((-1))
 
     assert len(y_hat) == len(y), f"y_hat (n={len(y_hat)}) and y (n={len(y)}) are different lengths"
-
+    
     y_hat = np.round(y_hat)
+    return np.sum(y_hat == y) / len(y)
+
+"""
+Calculates accuracy for biknary classification problem
+"""
+def binary_classifcation_accuracy(y_hat, y, binary_class=True):
+
+    if len(y_hat.shape) == 2:
+        y_hat = y_hat.reshape((-1))
+    if len(y.shape) == 2:
+        y = y.reshape((-1))
+
+    assert len(y_hat) == len(y), f"y_hat (n={len(y_hat)}) and y (n={len(y)}) are different lengths"
+    
+    y_hat = np.sign(y_hat)
     return np.sum(y_hat == y) / len(y)

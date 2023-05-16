@@ -119,7 +119,7 @@ def admm_optimizer_linop(solver, X, y, max_iter, verbose=False):
     L = LA.cholesky(A)
     b_1 = F.H * y / solver.rho
     stop = time.perf_counter()
-    print(f'Pre Computations Took {stop - start:.3f}s')
+    print(f'\nPre Computations Took {stop - start:.3f}s')
 
     # --------------- Iterative Updates ---------------
     # benchmark times
@@ -178,8 +178,7 @@ def admm_optimizer_linop(solver, X, y, max_iter, verbose=False):
     solver.metrics["train_acc"] = np.array(train_acc)
 
     # Show times
-    print(f'Solving Times:')
-    print(f'U updates Took {time_u:.3f}s')
+    print(f'\nU updates Took {time_u:.3f}s')
     print(f'V updates Took {time_v:.3f}s')
     print(f'S updates Took {time_s:.3f}s')
 

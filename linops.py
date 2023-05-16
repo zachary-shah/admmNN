@@ -1,6 +1,11 @@
 import sigpy as sp
 import numpy as np
 
+# The sigpy library uses this linear operator abstraction, which is aweosme.
+# Basically, when applying some linear function A to an input x, you can of course 
+# use the matrix representation of A, but it is often not as efficient as exploting 
+# the matrix A's structure. In our case, G, F are repetative, and have a structure 
+# that is worth exploting.
 class G_linop(sp.linop.Linop):
 
     def __init__(self, d_diags, X):
