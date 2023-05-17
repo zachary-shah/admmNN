@@ -10,6 +10,7 @@ from utils import proxl2, generate_D
 from postprocess import calculate_cost, evaluate, evaluate2, recover_weights
 
 
+# RBCD params taken from standard heuristic
 class ADMMTrainer:
     def __init__(self, X, y, P, beta=1e-4, iters=1000, rho=1, dmat=None, loss_type='mse',
                  vs=None, ws=None, X_test=None, y_test=None, alpha0=2e-4, RBCD_block_size=1,
