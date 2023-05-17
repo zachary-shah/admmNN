@@ -6,6 +6,58 @@ Some random functions we will need to implement better / improve through the pro
 """
 
 """
+class to do F and G multiplicative operations a bit more memory efficiently
+"""
+class FG_Operators():
+
+    def __init__(self, d_diags, X):
+        n, P_S = d_diags.shape
+        n, d = X.shape
+        
+        self.P_S = P_S
+        self.n = n
+        self.d = d
+        self.d_diags = d_diags
+        self.X = X
+
+    # get matrix F_i
+    def F(self, i):
+        return self.d_diags[:,i, None] * self.X
+    
+    # get matrix G_i
+    def G(self, i):
+        return (2 * self.d_diags[:, i, None] - 1) * self.X
+    
+    # replace linop F * vec
+    def F_multop(self, vec, transpose=False):
+
+        if transpose:
+            vec = vec.squeeze()
+            assert vec.shape == (self.n,)
+            out = np.zeros((2, self.d, self.P_S))
+            for i in range(self.P_S):
+                out[0,:,i] = self.F(i).T @ vec
+                out[1,:,i] -= self.F(i).T @ vec
+        else:
+            assert vec.shape == (2, self.d, self.P_S)
+            out = np.zeros((self.n,))
+            for i in range(self.P_S):
+                out += self.F(i) @ (vec[0,:,i] - vec[1,:,i])
+
+        return out
+    
+    # replace linop G * vec
+    def G_multop(self, vec, transpose=False):
+        
+        out = np.zeros((2, self.d if transpose else self.n, self.P_S))
+
+        for i in range(self.P_S):
+            for j in range(2):
+                out[j,:,i] = (self.G(i).T if transpose else self.G(i)) @ vec[j,:,i]
+
+        return out
+    
+"""
 Function to sample h_i vectors which create D_i = I(X @ h_i >= 0) matrices given training data X, and number of samples P desired
 return: a d x P matrix, where each column i is the random vector h_i
 """

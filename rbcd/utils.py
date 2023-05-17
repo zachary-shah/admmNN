@@ -13,9 +13,9 @@ def relu(z):
     return np.maximum(z, 0)
 
 
-# def relu_prime(z):
-#     return (z>=0).astype(int)
-#     # return ((z>=0).astype(int)*1+0)
+def relu_prime(z):
+    return (z>=0).astype(int)
+    # return ((z>=0).astype(int)*1+0)
 
 
 def proxl2(z, beta, gamma, use_torch=False):

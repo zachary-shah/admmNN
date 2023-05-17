@@ -4,7 +4,7 @@ from sklearn.preprocessing import StandardScaler
 from time import perf_counter
 
 from relu_utils import sample_activation_vectors, get_hyperplane_cuts, squared_loss, classifcation_accuracy
-from optimizers import IMPLEMENTED_OPTIMIZERS, cvxpy_optimizer, admm_optimizer, admm_optimizer_linop
+from optimizers import IMPLEMENTED_OPTIMIZERS, admm_optimizer
 
 """
 Shell structure for 2 Layer Convex ReLU Solver
@@ -34,7 +34,7 @@ class Approximate_2_Layer_ReLU():
                  bias=True,
                  loss_func = squared_loss,
                  acc_func = classifcation_accuracy,
-                 optimizer = "admm",
+                 optimizer = admm_optimizer,
                  standardize_data = False,
                  seed=-1,
                  ):
@@ -58,7 +58,8 @@ class Approximate_2_Layer_ReLU():
         self.seed = seed
         self.loss_func = loss_func
         self.acc_func = acc_func
-        
+        self.optimizer = optimizer
+
         # random vectors used for forming D matrices as diag([X h >= 0])
         self.h = None
 
@@ -105,17 +106,7 @@ class Approximate_2_Layer_ReLU():
 
         t_start = perf_counter()
 
-        if self.optimizer == "cvxpy":
-
-            self = cvxpy_optimizer(self, X, y, max_iter, verbose=verbose)
-
-        elif self.optimizer == "admm":
-
-            # self = admm_optimizer(self, X, y, max_iter, verbose=verbose)
-            self = admm_optimizer_linop(self, X, y, max_iter, verbose=verbose)
-
-        else:
-            raise NotImplementedError
+        self = self.optimizer(self, X, y, max_iter, verbose=verbose)
         
         self.metrics["solve_time"] = perf_counter() - t_start
 
