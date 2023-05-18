@@ -1,0 +1,7 @@
+.DS_Store
+__pycache__/
+env2/
+baadam/
+weights/
+results/
+Datasets/
