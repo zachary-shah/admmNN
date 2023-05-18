@@ -247,7 +247,7 @@ def admm_optimizer(solver, X, y, max_iter, verbose=False):
     L = LA.cholesky(A)
     del A
     stop = time.perf_counter()
-    print(f'\nPre Computations Took {stop - start:.3f}s')
+    if verbose: print(f'\nPre Computations Took {stop - start:.3f}s')
 
     # --------------- Iterative Updates ---------------
     # benchmark times
@@ -307,9 +307,10 @@ def admm_optimizer(solver, X, y, max_iter, verbose=False):
     solver.metrics["train_acc"] = np.array(train_acc)
 
     # Show times
-    print(f'\nU updates Took {time_u:.3f}s')
-    print(f'V updates Took {time_v:.3f}s')
-    print(f'S updates Took {time_s:.3f}s')
+    if verbose:
+        print(f'\nU updates Took {time_u:.3f}s')
+        print(f'V updates Took {time_v:.3f}s')
+        print(f'S updates Took {time_s:.3f}s')
 
     return solver
 

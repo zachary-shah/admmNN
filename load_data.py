@@ -17,7 +17,7 @@ from os.path import dirname, join, abspath
 # The MNIST 
 def load_mnist(n=3000, downsample=False, stride=3):
     project_root = dirname(abspath(''))
-    load_path = join(project_root, 'Convex-NN-Journal', 'Datasets', 'mnist.pkl.gz')
+    load_path = join(project_root, "baADMM", 'Convex-NN-Journal', 'Datasets', 'mnist.pkl.gz')
     with gzip.open(load_path, 'rb') as fmnist:
         training_data, validation_data, test_data = pickle.load(fmnist, encoding="bytes")
     dim = ceil(28 / stride)

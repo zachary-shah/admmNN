@@ -28,10 +28,23 @@ from ADMM_torch import ADMMTrainer
 ### Binary Cross-Entropy
 """
 
-beta, P, n = .0001, 72, 12000
+beta, P, n = .0001, 8, 12000
+
 #X, y, X_test, y_test = load_fmnist(n=n, downsample=False)
-X, y, X_test, y_test = load_mnist(n=n, downsample=False)
+X, y, X_test, y_test = load_mnist(n=n, downsample=True)
 yy, yy_test = ((y+1)//2).astype(int), ((y_test+1)//2).astype(int)
+
+# Show dims
+print(f'X_train shape = {X.shape}')
+print(f'X_test  shape = {X_test.shape}')
+print(f'y_train shape = {yy.shape}')
+print(f'y_test  shape = {yy_test.shape}')
+
+
+print(yy[:40])
+print(yy_test[:40])
+
+
 dmat, n, d, P, v, w = generate_D(X, P)
 
 """### ADMM-RBCD"""
@@ -50,6 +63,7 @@ for r in range(runs):
     admm_rbcd_trainer = ADMMTrainer(
         X, yy, P=P, beta=beta, rho=.02, gamma_ratio=.2, alpha0=3e-6, dmat=None, loss_type='ce', 
         X_test=X_test, y_test=yy_test, iters=iters, RBCDthresh=.7, RBCD_block_size=3)
+    
     costs, costs2, dists, accuracies, v, w, u, alpha = admm_rbcd_trainer.ADMM_train()
 
     print("Evaluating on training set...")

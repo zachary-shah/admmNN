@@ -43,7 +43,6 @@ print(f'X_test  shape = {X_test.shape}')
 print(f'y_train shape = {y_train.shape}')
 print(f'y_test  shape = {y_test.shape}')
 
-# ------------ Train Approximate (RBCD) ADMM ------------
 params = dict(m=m,
              P_S=m,
              rho=rho,
@@ -55,25 +54,27 @@ params = dict(m=m,
              acc_func=binary_classifcation_accuracy,
 )
 
-# using approximate admm solver
-solver = Approximate_2_Layer_ReLU(**params, optimizer=approx_admm_optimizer)
+# ------------ Train Approximate (RBCD) ADMM ------------
 
-solver.optimize(X_train, y_train, max_iter=10, verbose=True)
+# # using approximate admm solver
+# solver = Approximate_2_Layer_ReLU(**params, optimizer=approx_admm_optimizer)
 
-print("\nAPROX ADMM SOLVER PERFORMANCE:")
-y_hat_train = solver.predict(X_train, weights="C-ReLU")
-y_hat_test = solver.predict(X_test, weights="C-ReLU")
-print(f"Train loss: {squared_loss(y_hat_train, y_train)}")
-print(f"Train accuracy: {binary_classifcation_accuracy(y_hat_train, y_train)}")
-print(f"Test loss: {squared_loss(y_hat_test, y_test)}")
-print(f"Test accuracy: {binary_classifcation_accuracy(y_hat_test, y_test)}")
+# solver.optimize(X_train, y_train, max_iter=10, verbose=True)
+
+# print("\nAPROX ADMM SOLVER PERFORMANCE:")
+# y_hat_train = solver.predict(X_train, weights="C-ReLU")
+# y_hat_test = solver.predict(X_test, weights="C-ReLU")
+# print(f"Train loss: {squared_loss(y_hat_train, y_train)}")
+# print(f"Train accuracy: {binary_classifcation_accuracy(y_hat_train, y_train)}")
+# print(f"Test loss: {squared_loss(y_hat_test, y_test)}")
+# print(f"Test accuracy: {binary_classifcation_accuracy(y_hat_test, y_test)}")
 
 # ------------ Train ADMM ------------
 
 # using admm solver
 solver = Approximate_2_Layer_ReLU(**params, optimizer=admm_optimizer)
 
-solver.optimize(X_train, y_train, max_iter=max_iter, verbose=False)
+solver.optimize(X_train, y_train, max_iter=max_iter, verbose=True)
 
 print("\nADMM SOLVER PERFORMANCE:")
 y_hat_train = solver.predict(X_train, weights="C-ReLU")
