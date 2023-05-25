@@ -1,0 +1,969 @@
+(cvx-env) zachary@DN51s4s6 baADMM % python test_mnist.py
+
+TESTING RELU ON MNIST! 
+EXPERIMENT DATE: 25/05/2023 11:34:46...
+  MNIST Data Params:
+    Downsampled from d=784 to 100: True
+    standardized data: False
+  Experiment Params:
+    ntrials: 5
+    loss type: mse
+  ADMM Solver params:
+    rho = 0.01
+    step = 0.01
+    beta = 0.001
+    bias = True
+    max_iter = 10
+  Optimizers used:
+    Defaults: MLP-NN, ADMM-RBCD
+    Additional: ['ADMM', 'CVXPY']
+  Figure 1 params: 
+    PS_vals: [ 4 10 20 30 40 50]
+    n: 1000
+  Figure 2 params:
+    n vals: 9 between 100 and inf
+    PS: 8
+
+
+Loading data...
+Data loaded. Full data dimensions: 
+  X_train shape = (11808, 100)
+  X_test  shape = (2006, 100)
+  y_train shape = (11808,)
+  y_test  shape = (2006,)
+  Proportion of 8s in train data: 0.4954268292682927
+  Proportion of 8s in test data: 0.48554336989032904
+Generating Figure 1 data...
+  Proportion of 8s in train data: 0.487
+  Proportion of 8s in test data: 0.48554336989032904
+TRIALS FOR P_S=4 (size 1/6)
+  ADMM trial 1/5
+  CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 4
+Starting ADMM iterations...
+Iteration 35 , Training cost: 110.63699340820312
+Total cost:  124.2843017578125
+Accuracy:  0.9561315774917603
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  CVXPY trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 4
+Starting ADMM iterations...
+Iteration 35 , Training cost: 128.18173217773438
+Total cost:  115.90644073486328
+Accuracy:  0.9526420831680298
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  CVXPY trial 3/5
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 4
+Starting ADMM iterations...
+Iteration 35 , Training cost: 126.76470947265625
+Total cost:  122.7822036743164
+Accuracy:  0.9506480693817139
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+  CVXPY trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 4
+Starting ADMM iterations...
+Iteration 35 , Training cost: 190.5261688232422
+Total cost:  156.9444580078125
+Accuracy:  0.9346958994865417
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  CVXPY trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 4
+Starting ADMM iterations...
+Iteration 35 , Training cost: 266.0233154296875
+Total cost:  217.5104522705078
+Accuracy:  0.9267198443412781
+  mlp-nn trial 5/5
+TRIALS FOR P_S=10 (size 2/6)
+  ADMM trial 1/5
+  CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 10
+Starting ADMM iterations...
+Iteration 35 , Training cost: 76.19062042236328
+Total cost:  117.56945037841797
+Accuracy:  0.9561315774917603
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  CVXPY trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 10
+Starting ADMM iterations...
+Iteration 35 , Training cost: 74.59024047851562
+Total cost:  123.78485870361328
+Accuracy:  0.9491525292396545
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  CVXPY trial 3/5
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 10
+Starting ADMM iterations...
+Iteration 35 , Training cost: 75.77468872070312
+Total cost:  136.02955627441406
+Accuracy:  0.9481555223464966
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+  CVXPY trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 10
+Starting ADMM iterations...
+Iteration 35 , Training cost: 75.75924682617188
+Total cost:  123.60743713378906
+Accuracy:  0.9521435499191284
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  CVXPY trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 10
+Starting ADMM iterations...
+Iteration 35 , Training cost: 70.06051635742188
+Total cost:  117.13021087646484
+Accuracy:  0.958125650882721
+  mlp-nn trial 5/5
+TRIALS FOR P_S=20 (size 3/6)
+  ADMM trial 1/5
+  CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 20
+Starting ADMM iterations...
+Iteration 35 , Training cost: 47.32677459716797
+Total cost:  127.21552276611328
+Accuracy:  0.9561315774917603
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  CVXPY trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 20
+Starting ADMM iterations...
+Iteration 35 , Training cost: 54.25338363647461
+Total cost:  127.56981658935547
+Accuracy:  0.9461615085601807
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  CVXPY trial 3/5
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 20
+Starting ADMM iterations...
+Iteration 35 , Training cost: 55.55933380126953
+Total cost:  123.47360229492188
+Accuracy:  0.948654055595398
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+  CVXPY trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 20
+Starting ADMM iterations...
+Iteration 35 , Training cost: 54.47396469116211
+Total cost:  130.11814880371094
+Accuracy:  0.9536390900611877
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  CVXPY trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 20
+Starting ADMM iterations...
+Iteration 35 , Training cost: 42.25175094604492
+Total cost:  130.003173828125
+Accuracy:  0.9516450762748718
+  mlp-nn trial 5/5
+TRIALS FOR P_S=30 (size 4/6)
+  ADMM trial 1/5
+  CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 30
+Starting ADMM iterations...
+Iteration 35 , Training cost: 43.07659149169922
+Total cost:  136.25753784179688
+Accuracy:  0.94765704870224
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  CVXPY trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 30
+Starting ADMM iterations...
+Iteration 35 , Training cost: 45.25495910644531
+Total cost:  135.04949951171875
+Accuracy:  0.9546360969543457
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  CVXPY trial 3/5
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 30
+Starting ADMM iterations...
+Iteration 35 , Training cost: 39.87036895751953
+Total cost:  132.4364471435547
+Accuracy:  0.94765704870224
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+/Users/zachary/Desktop/Stanford/_Spr2023/EE 364B/Project/baADMM/optimizers.py:282: RuntimeWarning: divide by zero encountered in divide
+  v = np.maximum(1 - solver.beta / (solver.rho * LA.norm(u + lam, axis=1)[:, None, :]), 0) * (u + lam)
+  CVXPY trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 30
+Starting ADMM iterations...
+Iteration 35 , Training cost: 46.09172439575195
+Total cost:  141.27731323242188
+Accuracy:  0.9426719546318054
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  CVXPY trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 30
+Starting ADMM iterations...
+Iteration 35 , Training cost: 37.730220794677734
+Total cost:  144.83335876464844
+Accuracy:  0.9431704878807068
+  mlp-nn trial 5/5
+TRIALS FOR P_S=40 (size 5/6)
+  ADMM trial 1/5
+  CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 40
+Starting ADMM iterations...
+Iteration 35 , Training cost: 35.24394226074219
+Total cost:  133.61216735839844
+Accuracy:  0.9501495361328125
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  CVXPY trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 40
+Starting ADMM iterations...
+Iteration 35 , Training cost: 38.41838073730469
+Total cost:  144.45956420898438
+Accuracy:  0.9446660280227661
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  CVXPY trial 3/5
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 40
+Starting ADMM iterations...
+Iteration 35 , Training cost: 33.739261627197266
+Total cost:  150.03465270996094
+Accuracy:  0.9336988925933838
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+  CVXPY trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 40
+Starting ADMM iterations...
+Iteration 35 , Training cost: 32.181297302246094
+Total cost:  145.7664031982422
+Accuracy:  0.9471585154533386
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  CVXPY trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 40
+Starting ADMM iterations...
+Iteration 35 , Training cost: 34.17304229736328
+Total cost:  133.9390106201172
+Accuracy:  0.9446660280227661
+  mlp-nn trial 5/5
+TRIALS FOR P_S=50 (size 6/6)
+  ADMM trial 1/5
+  CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 50
+Starting ADMM iterations...
+Iteration 35 , Training cost: 31.335941314697266
+Total cost:  135.64468383789062
+Accuracy:  0.9516450762748718
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  CVXPY trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 50
+Starting ADMM iterations...
+Iteration 35 , Training cost: 30.11628532409668
+Total cost:  150.14340209960938
+Accuracy:  0.9441674947738647
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  CVXPY trial 3/5
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 50
+Starting ADMM iterations...
+Iteration 35 , Training cost: 27.504364013671875
+Total cost:  138.01773071289062
+Accuracy:  0.9481555223464966
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+  CVXPY trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 50
+Starting ADMM iterations...
+Iteration 35 , Training cost: 30.03173828125
+Total cost:  137.31478881835938
+Accuracy:  0.9481555223464966
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  CVXPY trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1000 100 50
+Starting ADMM iterations...
+Iteration 35 , Training cost: 29.51850700378418
+Total cost:  146.4948272705078
+Accuracy:  0.9451645016670227
+  mlp-nn trial 5/5
+Done! Generating plots...
+Generating figure 2 data...
+TRIALS FOR n=100 (size 1/9)
+  Proportion of 8s in train data: 0.45
+  ADMM trial 1/5
+  CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 100 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 0.24160940945148468
+Total cost:  5.835060119628906
+Accuracy:  0.918245255947113
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  CVXPY trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 100 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 0.37094229459762573
+Total cost:  6.876712322235107
+Accuracy:  0.9217348098754883
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  CVXPY trial 3/5
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 100 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1.7216297388076782
+Total cost:  6.22945499420166
+Accuracy:  0.920239269733429
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+  CVXPY trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 100 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1.2042169570922852
+Total cost:  5.828921318054199
+Accuracy:  0.937188446521759
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  CVXPY trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 100 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 0.3897264003753662
+Total cost:  7.003227233886719
+Accuracy:  0.929710865020752
+  mlp-nn trial 5/5
+TRIALS FOR n=1563 (size 2/9)
+  Proportion of 8s in train data: 0.4888035828534869
+  ADMM trial 1/5
+  CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1563 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 163.01510620117188
+Total cost:  188.45265197753906
+Accuracy:  0.9551345705986023
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  CVXPY trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1563 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 145.68902587890625
+Total cost:  204.97430419921875
+Accuracy:  0.9441674947738647
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  CVXPY trial 3/5
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1563 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 144.44630432128906
+Total cost:  194.54837036132812
+Accuracy:  0.9526420831680298
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+  CVXPY trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1563 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 151.42694091796875
+Total cost:  198.3212890625
+Accuracy:  0.9526420831680298
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  CVXPY trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 1563 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 142.04747009277344
+Total cost:  190.25201416015625
+Accuracy:  0.9521435499191284
+  mlp-nn trial 5/5
+TRIALS FOR n=3027 (size 3/9)
+  Proportion of 8s in train data: 0.49421869838123555
+  ADMM trial 1/5
+  CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 3027 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 303.8337707519531
+Total cost:  393.250244140625
+Accuracy:  0.9551345705986023
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  CVXPY trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 3027 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 366.68438720703125
+Total cost:  396.2467041015625
+Accuracy:  0.9496510624885559
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  CVXPY trial 3/5
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 3027 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 289.9933776855469
+Total cost:  377.173583984375
+Accuracy:  0.9516450762748718
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+  CVXPY trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 3027 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 307.8760070800781
+Total cost:  398.50982666015625
+Accuracy:  0.9526420831680298
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  CVXPY trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 3027 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 295.0003356933594
+Total cost:  403.6311950683594
+Accuracy:  0.9511465430259705
+  mlp-nn trial 5/5
+TRIALS FOR n=4490 (size 4/9)
+  Proportion of 8s in train data: 0.4930957683741648
+  ADMM trial 1/5
+  CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 4490 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 540.2692260742188
+Total cost:  558.4017333984375
+Accuracy:  0.9531405568122864
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  CVXPY trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 4490 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 501.60198974609375
+Total cost:  587.625732421875
+Accuracy:  0.9551345705986023
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  CVXPY trial 3/5
+/Users/zachary/miniconda3/envs/cvx-env/lib/python3.8/site-packages/cvxpy/problems/problem.py:1385: UserWarning: Solution may be inaccurate. Try another solver, adjusting the solver settings, or solve with verbose=True for more information.
+  warnings.warn(
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 4490 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 496.70989990234375
+Total cost:  552.0048217773438
+Accuracy:  0.9576271176338196
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+  CVXPY trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 4490 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 483.03271484375
+Total cost:  550.6981201171875
+Accuracy:  0.9551345705986023
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  CVXPY trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 4490 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 465.1255798339844
+Total cost:  552.7235717773438
+Accuracy:  0.9571285843849182
+  mlp-nn trial 5/5
+TRIALS FOR n=5954 (size 5/9)
+  Proportion of 8s in train data: 0.4946254618743702
+  ADMM trial 1/5
+  CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 5954 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 622.9205932617188
+Total cost:  773.3715209960938
+Accuracy:  0.9526420831680298
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  CVXPY trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 5954 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 596.8470458984375
+Total cost:  739.2471923828125
+Accuracy:  0.9601196646690369
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  CVXPY trial 3/5
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 5954 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 682.2447509765625
+Total cost:  731.8323364257812
+Accuracy:  0.9591226577758789
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+  CVXPY trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 5954 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 644.9593505859375
+Total cost:  765.8710327148438
+Accuracy:  0.9571285843849182
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  CVXPY trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 5954 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 589.8096923828125
+Total cost:  727.7818603515625
+Accuracy:  0.9611166715621948
+  mlp-nn trial 5/5
+TRIALS FOR n=7417 (size 6/9)
+  Proportion of 8s in train data: 0.49507887285964675
+  ADMM trial 1/5
+  CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 7417 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 750.174072265625
+Total cost:  926.3464965820312
+Accuracy:  0.9586241245269775
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  CVXPY trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 7417 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 783.2474365234375
+Total cost:  970.7423706054688
+Accuracy:  0.9541375637054443
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  CVXPY trial 3/5
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 7417 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 817.606201171875
+Total cost:  927.7530517578125
+Accuracy:  0.9616151452064514
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+  CVXPY trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 7417 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 795.7425537109375
+Total cost:  941.4118041992188
+Accuracy:  0.9606181383132935
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  CVXPY trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 7417 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 769.2379760742188
+Total cost:  958.2054443359375
+Accuracy:  0.9566301107406616
+  mlp-nn trial 5/5
+TRIALS FOR n=8881 (size 7/9)
+  Proportion of 8s in train data: 0.494426303344218
+  ADMM trial 1/5
+  CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 8881 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 993.9391479492188
+Total cost:  1174.7989501953125
+Accuracy:  0.9566301107406616
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  CVXPY trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 8881 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1034.1715087890625
+Total cost:  1093.1077880859375
+Accuracy:  0.9601196646690369
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  CVXPY trial 3/5
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 8881 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1098.6968994140625
+Total cost:  1106.8812255859375
+Accuracy:  0.9556331038475037
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+  CVXPY trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 8881 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1035.251220703125
+Total cost:  1069.730224609375
+Accuracy:  0.9576271176338196
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  CVXPY trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 8881 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 961.8213500976562
+Total cost:  1095.9228515625
+Accuracy:  0.9586241245269775
+  mlp-nn trial 5/5
+TRIALS FOR n=10344 (size 8/9)
+  Proportion of 8s in train data: 0.4947795823665893
+  ADMM trial 1/5
+  CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 10344 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1390.998291015625
+Total cost:  1297.86767578125
+Accuracy:  0.9651046991348267
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  CVXPY trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 10344 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1235.124755859375
+Total cost:  1310.216064453125
+Accuracy:  0.9566301107406616
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  CVXPY trial 3/5
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 10344 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1181.08837890625
+Total cost:  1290.59765625
+Accuracy:  0.9591226577758789
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+  CVXPY trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 10344 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1282.4686279296875
+Total cost:  1315.76416015625
+Accuracy:  0.9591226577758789
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  CVXPY trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 10344 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1080.9552001953125
+Total cost:  1338.670654296875
+Accuracy:  0.9551345705986023
+  mlp-nn trial 5/5
+TRIALS FOR n=11808 (size 9/9)
+  Proportion of 8s in train data: 0.4954268292682927
+  ADMM trial 1/5
+  CVXPY trial 1/5
+Solve failed for CVXPY trial 1/5
+  admm-approx trial 1/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 11808 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1383.741943359375
+Total cost:  1499.9580078125
+Accuracy:  0.9591226577758789
+  mlp-nn trial 1/5
+  ADMM trial 2/5
+  admm-approx trial 2/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 11808 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1221.4739990234375
+Total cost:  1475.475341796875
+Accuracy:  0.9586241245269775
+  mlp-nn trial 2/5
+  ADMM trial 3/5
+  admm-approx trial 3/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 11808 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1279.9989013671875
+Total cost:  1451.44189453125
+Accuracy:  0.9616151452064514
+  mlp-nn trial 3/5
+  ADMM trial 4/5
+  admm-approx trial 4/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 11808 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1246.5147705078125
+Total cost:  1475.5533447265625
+Accuracy:  0.958125650882721
+  mlp-nn trial 4/5
+  ADMM trial 5/5
+  admm-approx trial 5/5
+device: cpu
+Calculating GTG...
+Generating D matrices...
+n d P: 11808 100 8
+Starting ADMM iterations...
+Iteration 35 , Training cost: 1286.21044921875
+Total cost:  1559.87255859375
+Accuracy:  0.958125650882721
+  mlp-nn trial 5/5
+Done! Generating plots...
+Press Ctrl+C to stop WebAgg server
+^CServer is stopped
+(cvx-env) zachary@DN51s4s6 baADMM % 
