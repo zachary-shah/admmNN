@@ -3,7 +3,7 @@ import numpy.linalg as LA
 from sklearn.preprocessing import StandardScaler
 from time import perf_counter
 
-from relu_utils import sample_activation_vectors, get_hyperplane_cuts, squared_loss, classifcation_accuracy
+from relu_utils import squared_loss, classifcation_accuracy
 from optimizers import IMPLEMENTED_OPTIMIZERS, admm_optimizer
 
 """
@@ -101,13 +101,9 @@ class Approximate_2_Layer_ReLU():
         # cleanly preprocess data
         X = self._preprocess_data(X)
 
-        # sample random vectors and get diagonal entries of D_i matrices
-        self.h = sample_activation_vectors(X, P_S, seed=self.seed, dist='normal')
-
+        # solve optimization problem
         t_start = perf_counter()
-
         self = self.optimizer(self, X, y, max_iter, verbose=verbose)
-        
         self.metrics["solve_time"] = perf_counter() - t_start
 
         # recover u1.... u_ms and alpha1 ... alpha_ms as Optimal Weights of NC-ReLU Problem
@@ -122,30 +118,19 @@ class Approximate_2_Layer_ReLU():
     :param X - Evaluation data (n x d)
     :param max_iter (optional) - max iterations for ADMM algorithm
     """
-    def predict(self, X, weights="C-ReLU"):
+    def predict(self, X, weights="NC-ReLU"):
 
         assert self.optimized is True, "Must call .optimize() before applying predictions."
         assert len(X.shape) == 2, "X must be 2 dimensional array"
         assert X.shape[1] == self.d, f"X must have same feature size as trained data (d={self.d})"
-        assert weights in ["NC-ReLU", "C-ReLU"], f"Weights options are either \"NC-ReLU\" for weights of non-convex problem, or \"C-ReLU\" for weights of convex problem"
+        
+        if weights == "C-ReLU":
+            print("Warning: using original problem weights is no longer implemented. Proceeding predictions with transformed optimal weights.")
 
         X = self._preprocess_data(X)
 
-        y_hat = np.zeros((X.shape[0],1))
-        
         # prediction using weights for equivalent nonconvex problem
-        if weights == "NC-ReLU": 
-            print("WARNING: NC-RelU weights not correctly implmeneted yet.")
-            for j in range(self.m):
-                y_hat += np.clip(X @ self.u[j][:,None], 0, np.inf) * self.alpha[j]
-
-        # prediction using weights for solved convex problem
-        elif weights == "C-ReLU": 
-            d_diags = get_hyperplane_cuts(X, self.h)
-            for i in range(self.P_S):
-                y_hat += (d_diags[:,i, None] * X) @ (self.v[i][:,None] - self.w[i][:,None])
-        else:
-            raise NotImplementedError
+        y_hat = np.maximum(X @ self.u, 0) @ self.alpha
 
         return y_hat
     
@@ -167,7 +152,7 @@ class Approximate_2_Layer_ReLU():
             X = scaler.fit_transform(X)
 
         # add bias term to data
-        n, d = X.shape
+        n, _ = X.shape
         if self.bias:
             X = np.hstack([X, np.ones((n,1))])
 
@@ -176,38 +161,59 @@ class Approximate_2_Layer_ReLU():
     """
     Given optimal v^*, w^* of convex problem (Eq (2.1)), derive the optimal weights u^*, alpha^* of the non-convex probllem (Eq (2.1))
     Applies Theorem 1 of Pilanci, Ergen 2020
-    TODO: fix function. I don't think its behaving the way it should
-    - what is 1i and 2i indices of Theorem 1?
     """
     def _optimal_weights_transform(self, verbose=False):
 
         assert self.v is not None
         assert self.w is not None
 
-        self.u = np.zeros((self.m,self.d + int(self.bias)))
-        self.alpha = np.zeros((self.m,1))
+        v = self.v.T
+        w = self.w.T
+
+        if verbose: 
+            print(f"Doing weight transform: ")
+            print(f"  starting v shape: {self.v.shape}")
+            print(f"  starting w shape: {self.w.shape}")
+            print(f"  P_S: {self.P_S}")
+            print(f"  d: {self.d}")
+
+        alpha1 = np.sqrt(np.linalg.norm(v, 2, axis=0))
+        mask1 = alpha1 != 0
+        u1 = v[:, mask1] / alpha1[mask1]
+        alpha2 = -np.sqrt(np.linalg.norm(w, 2, axis=0))
+        mask2 = alpha2 != 0
+        u2 = -w[:, mask2] / alpha2[mask2]
+
+        self.u = np.append(u1, u2, axis=1)
+        self.alpha = np.append(alpha1[mask1], alpha2[mask2])
+
+        if verbose: 
+            print(f"  transfomred u shape: {self.u.shape}")
+            print(f"  transformed alpha shape: {self.alpha.shape}")
 
         # critical number of neurons 
-        mstar = np.sum(~ np.isclose(LA.norm(self.v, axis=1), 0)) + np.sum(~ np.isclose(LA.norm(self.w, axis=1), 0))
-        if self.m > mstar:
-            print("m > mstar. Network guranteed not optimal.")
+        # self.u = np.zeros((self.m,self.d + int(self.bias)))
+        # self.alpha = np.zeros((self.m,1))
 
-        i,j = 0,0
-        while i < self.P_S and j < self.m:
-            if not np.isclose(LA.norm(self.v[i]), 0):
-                self.u[j] = self.v[i] / np.sqrt(LA.norm(self.v[i]))
-                self.alpha[j] = np.sqrt(LA.norm(self.v[i]))
-                j += 1
-            i += 1
-        i = 0
-        while i < self.P_S and j < self.m:
-            if not np.isclose(LA.norm(self.w[i]), 0):
-                self.u[j] = self.w[i] / np.sqrt(LA.norm(self.w[i]))
-                self.alpha[j] = - np.sqrt(LA.norm(self.w[i]))
-                j += 1
-            i += 1
+        # mstar = np.sum(~ np.isclose(LA.norm(self.v, axis=1), 0)) + np.sum(~ np.isclose(LA.norm(self.w, axis=1), 0))
+        # if self.m > mstar:
+        #     print("m > mstar. Network guranteed not optimal.")
 
-        if verbose: print(f"Network of width {self.m} has {j} nonzero neurons for non-convex weights.")
+        # i,j = 0,0
+        # while i < self.P_S and j < self.m:
+        #     if not np.isclose(LA.norm(self.v[i]), 0):
+        #         self.u[j] = self.v[i] / np.sqrt(LA.norm(self.v[i]))
+        #         self.alpha[j] = np.sqrt(LA.norm(self.v[i]))
+        #         j += 1
+        #     i += 1
+        # i = 0
+        # while i < self.P_S and j < self.m:
+        #     if not np.isclose(LA.norm(self.w[i]), 0):
+        #         self.u[j] = self.w[i] / np.sqrt(LA.norm(self.w[i]))
+        #         self.alpha[j] = - np.sqrt(LA.norm(self.w[i]))
+        #         j += 1
+        #     i += 1
+        # if verbose: print(f"Network of width {self.m} has {j} nonzero neurons for non-convex weights.")
     
        
 

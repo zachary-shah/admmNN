@@ -56,10 +56,10 @@ def run_admm(X_train, y_train, X_test, y_test, params, optimizer, max_iter):
     # using approximate admm solver
     solver = Approximate_2_Layer_ReLU(**params, optimizer=optimizer)
 
-    solver.optimize(X_train, y_train, max_iter=max_iter, verbose=False)
+    solver.optimize(X_train, y_train, max_iter=max_iter, verbose=True)
 
-    y_hat_train = solver.predict(X_train, weights="C-ReLU")
-    y_hat_test = solver.predict(X_test, weights="C-ReLU")
+    y_hat_train = solver.predict(X_train)
+    y_hat_test = solver.predict(X_test)
     train_loss = squared_loss(y_hat_train, y_train)
     test_loss = squared_loss(y_hat_test, y_test)
     train_acc = binary_classifcation_accuracy(y_hat_train, y_train)

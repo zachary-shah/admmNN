@@ -58,38 +58,27 @@ class FG_Operators():
         return out
     
 """
-Function to sample h_i vectors which create D_i = I(X @ h_i >= 0) matrices given training data X, and number of samples P desired
-return: a d x P matrix, where each column i is the random vector h_i
-"""
-def sample_activation_vectors(X, P, 
-                     seed=-1,
-                     dist='normal'): #TODO: add typing
-     
-    assert dist in ['unif', 'normal'], "Sampling must be one of \'unif\', \'normal\'."
-
-    if seed > 0:
-        np.random.seed(seed)
-
-    n,d = X.shape
-
-    if dist == 'normal':
-        h = np.random.randn(d, P)
-    elif dist == 'unif':
-        h = np.random.rand(d, P)
-
-    return h
-
-
-"""
 Function to sample diagonals of D_i matrices given training data X, and random vectors h
 return: a n x P matrix, where each column i is the diagonal entries for D_i
 """
-def get_hyperplane_cuts(X, h): #TODO: add typing
+def get_hyperplane_cuts(X, P): #TODO: add typing
 
-    d_diags = X @ h >= 0
-    d_diags.astype("float")
+    n,d = X.shape
 
-    return d_diags
+    d_diags = X @ np.random.randn(d, P) >= 0
+
+    # make unique
+    d_diags = np.unique(d_diags, axis=1)
+
+    # add samples if needed
+    while d_diags.shape[1] != P:
+        d_diags = np.append([d_diags, X @ np.random.randn(d, P) >= 0], axis=1)
+        d_diags = np.unique(d_diags, axis=1)
+        d_diags = d_diags[:, :P]
+
+    print(f"d_diags.shape: {d_diags.shape}")
+
+    return d_diags.astype("float")
 
 
 """

@@ -23,7 +23,7 @@ def cvxpy_optimizer(solver, X, y, max_iter, verbose=False):
     v = cp.Variable((d * P_S))
     w = cp.Variable((d * P_S))
     
-    d_diags = get_hyperplane_cuts(X, solver.h)
+    d_diags = get_hyperplane_cuts(X, P_S)
 
     # Construct all possible data enumerations (n x P_S * d)
     F = np.hstack([d_diags[:, i, None] * X for i in range(P_S)])
@@ -45,8 +45,6 @@ def cvxpy_optimizer(solver, X, y, max_iter, verbose=False):
                     [((2 * d_diags[:, i, None] - 1) * X) @ v[i*d:(i+1)*d] >= 0 for i in range(P_S)] + \
                     [((2 * d_diags[:, i, None] - 1) * X) @ w[i*d:(i+1)*d] >= 0 for i in range(P_S)])
     prob.solve(verbose=verbose, solver='ECOS')
-
-    stats = prob.solver_stats
     
     # Grab optimal values 
     solver.v = np.reshape(v.value, (P_S, d), order='C')
@@ -70,7 +68,7 @@ def admm_optimizer_orig(solver, X, y, max_iter, verbose=False):
     n, d = X.shape
     P_S = solver.P_S
     
-    d_diags = get_hyperplane_cuts(X, solver.h)
+    d_diags = get_hyperplane_cuts(X, P_S)
 
     # F here is n x (2d*P_S)
     F = np.hstack([np.hstack([d_diags[:,i, None] * X for i in range(P_S)]),
@@ -188,8 +186,8 @@ def admm_optimizer(solver, X, y, max_iter, verbose=False):
     n, d = X.shape
     P_S = solver.P_S
     
-    # Hyperplanes
-    d_diags = get_hyperplane_cuts(X, solver.h)
+    # Hyperplanes (D_i samples)
+    d_diags = get_hyperplane_cuts(X, P_S)
 
     # utility operator to memory-efficient compute F*u and G*u
     OPS = FG_Operators(d_diags=d_diags, X=X)
@@ -321,13 +319,12 @@ ADMM with RBCD updates
 """
 def approx_admm_optimizer(solver, X, y, max_iter, verbose=False):
 
-
     # Variables
     n, d = X.shape
     P_S = solver.P_S
     
     # Hyperplanes
-    d_diags = get_hyperplane_cuts(X, solver.h)
+    d_diags = get_hyperplane_cuts(X, P_S)
 
     # utility operator to memory-efficient compute F*u and G*u
     OPS = FG_Operators(d_diags=d_diags, X=X)
@@ -486,7 +483,6 @@ def approx_admm_optimizer(solver, X, y, max_iter, verbose=False):
     print(f'S updates Took {time_s:.3f}s')
 
     return solver
-
 
 
 ## FOR CHECKING THAT OPTIMIZERS ARE IMPLEMENTED 
