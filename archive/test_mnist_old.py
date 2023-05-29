@@ -1,7 +1,3 @@
-"""
-TODO: update runner with new solver interface
-"""
-
 import numpy as np
 import matplotlib
 matplotlib.use('WebAgg')

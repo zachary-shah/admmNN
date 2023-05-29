@@ -1,3 +1,7 @@
+"""
+Datasets to load (MNIST, FMNIST, CIFAR-10)
+"""
+
 import numpy as np
 from numpy.random import randn
 from math import ceil
@@ -6,18 +10,14 @@ import pickle, gzip
 import pandas as pd
 from os.path import dirname, join, abspath
 
-
-# # Randomly generated contrived dataset
-# def load_rand(n, d):
-#     X = randn(n, d)
-#     y = np.sign(randn(n))
-#     return X, y
-
-
 # The MNIST 
-def load_mnist(n=3000, downsample=False, stride=3):
+def load_mnist(dataset_rel_path=join('Convex-NN-Journal', 'Datasets', 'mnist.pkl.gz'), 
+               n=3000, 
+               downsample=False, 
+               stride=3):
+    
     project_root = dirname(abspath(''))
-    load_path = join(project_root, "baADMM", 'Convex-NN-Journal', 'Datasets', 'mnist.pkl.gz')
+    load_path = join(project_root, dataset_rel_path)
     with gzip.open(load_path, 'rb') as fmnist:
         training_data, validation_data, test_data = pickle.load(fmnist, encoding="bytes")
     dim = ceil(28 / stride)
@@ -73,9 +73,14 @@ def load_mnist(n=3000, downsample=False, stride=3):
 
 
 # Fashion MNIST 
-def load_fmnist(n=3000, downsample=False, stride=3, normalize=True):
+def load_fmnist(dataset_rel_path=join('Convex-NN-Journal', 'Datasets', 'Fashion MNIST'), 
+                n=3000, 
+                downsample=False, 
+                stride=3, 
+                normalize=True):
+    
     project_root = dirname(abspath(''))
-    path = join(project_root, 'Convex-NN-Journal', 'Datasets', 'Fashion MNIST')
+    path = join(project_root, dataset_rel_path)
     training_labels_path = join(path, 'train-labels-idx1-ubyte')
     training_images_path = join(path, 'train-images-idx3-ubyte')
     test_labels_path = join(path, 't10k-labels-idx1-ubyte')
@@ -130,9 +135,14 @@ def load_fmnist(n=3000, downsample=False, stride=3, normalize=True):
 
 
 # The CIFAR-10 
-def load_cifar(n=10000, downsample=False, stride=3, normalize=True):
+def load_cifar(dataset_rel_path = join('Convex-NN-Journal', 'Datasets', 'cifar-10-batches-py'), 
+               n=10000, 
+               downsample=False, 
+               stride=3, 
+               normalize=True):
+    
     project_root = dirname(abspath(''))
-    path = join(project_root, 'Convex-NN-Journal', 'Datasets', 'cifar-10-batches-py')
+    path = join(project_root, dataset_rel_path)
     dim = ceil(32 / stride)
 
     dats_training = []

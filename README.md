@@ -1,6 +1,29 @@
 # baADMM
 Convex Reformulation of ANN ReLU problem with GPU Acceleration 
 
+### UPDATED REPO STRUCTURE 
+
+Repo now has the following improvements implemented: 
+- one ADMM solver for ADMM and xADMM-RBCD
+- ADMM_Params object to abstract away parameters from end-state
+- mnp library to provide backend flexibility for math operations
+- typing hints for all functions
+
+
+Things still to-do to validate repo: 
+- [ ] Rewrite test_mnist.py to work with new runner config - Zach
+- [ ] Finish docs - Zach
+     - [ ] relu_solver.py docs
+     - [ ] optimizers.py docs
+     - [ ] 
+- [ ] Validate numpy backend
+- [ ] Validate torch backend - Miria
+- [ ] Validate jax backend
+    - [ ] Implement full jax backend (only added function wrappers) - Miria
+- [ ] Implement ADMM CG - Daniel 
+    - [ ] Add appropriate parameters for CG / PCG in utils.admm_utils.ADMM_Params
+    - [ ] Implement CG / PCG in utils.primal_update_utils.ADMM_cg_update()
+
 ### Todo List
 
 Zach Todo List (Due Sunday)
@@ -28,3 +51,5 @@ For Final Project
 - [ ] Test exact and approximate ADMM solvers against more baselines (CVX, scnn-fista, PyTorch)
 - [ ] Scale problem to CIFAR-10 classification, test against baselines
 - [ ] Test for other problems with structure, where numerical acceleration may be possible and present 
+
+
