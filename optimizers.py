@@ -8,7 +8,7 @@ import cvxpy as cp
 from time import perf_counter
 
 from utils.typing_utils import ArrayType, EvalFunction
-from utils.admm_utils import ADMM_Params, FG_Operators, get_hyperplane_cuts, tensor_to_vec, proxl2
+from utils.admm_utils import ADMM_Params, FG_Operators, get_hyperplane_cuts, tensor_to_vec, proxl2, linear_sys
 from utils.primal_update_utils import RBCD_update, ADMM_full_update, ADMM_cg_update
 
 import utils.math_utils as mnp
@@ -115,29 +115,13 @@ def admm_optimizer(parms: ADMM_Params,
     if verbose: print("  Completing precomputations...")
 
     if parms.mode == "ADMM":
-
-        A = mnp.eye(2 * d * P_S, device=parms.device, backend_type=parms.datatype_backend)
-        for i in range(P_S):
-            for j in range(P_S):
-                # perform multiplication 
-                FiFj = OPS.F(i % P_S).T @ OPS.F(j % P_S) / parms.rho
-                # assign to four quadrants
-                A[i*d:(i+1)*d, j*d:(j+1)*d] += FiFj
-                A[(i+P_S)*d:(i+P_S+1)*d, (j)*d:(j+1)*d] += - FiFj
-                A[(i)*d:(i+1)*d, (j+P_S)*d:(j+P_S+1)*d] += - FiFj
-                A[(i+P_S)*d:(i+P_S+1)*d, (j+P_S)*d:(j+P_S+1)*d] += FiFj
-        for i in range(2):
-            for j in range(P_S):
-                lower_ind = d * j + i * d * P_S
-                upper_ind = d * (j+1) + i * d * P_S
-                A[lower_ind:upper_ind, lower_ind:upper_ind] += OPS.G(j).T @ OPS.G(j)
-
+        
+        if parms.admm_cg_solve:
+            solver_type = 'cg'
+        else:
+            solver_type = 'cholesky'
+        ls = linear_sys(OPS, parms.rho, solver_type, backend_type=parms.datatype_backend)
         b_1 = OPS.F_multop(y, transpose=True) / parms.rho
-
-        # cholesky decomposition if not using conjugate gradient
-        if not parms.admm_cg_solve:
-            L = LA.cholesky(A)
-            del A
 
     elif parms.mode == "ADMM-RBCD":
         # compute Xi.T @ X only for this 
@@ -173,12 +157,8 @@ def admm_optimizer(parms: ADMM_Params,
 
         # admm full step
         if parms.mode == "ADMM":
-            # solve linear system approximately with conjugate gradient
-            if parms.admm_cg_solve:
-                u = ADMM_cg_update(parms, OPS, v, s, nu, lam, A, b_1)
-            # else solve full linear system
-            else:
-                u = ADMM_full_update(parms, OPS, v, s, nu, lam, L, b_1)
+            b = b_1 + v - lam + OPS.G_multop(s - nu, transpose=True)
+            u = ls.solve(b)
         # rbcd steps
         elif parms.mode == "ADMM-RBCD":
             parms, u = RBCD_update(parms, OPS, y, y_hat, u, v, s, nu, lam, GiTGi, loss_func, verbose=verbose)

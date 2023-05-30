@@ -104,14 +104,89 @@ class ADMM_Params():
             self.base_buffer_size= validate_param(base_buffer_size, "base_buffer_size", 8)
             self.rho_increment= validate_param(rho_increment, "rho_increment", 0.0001)
 
+"""
+linear system solvers for ADMM
+"""
+class linear_sys:
+
+    def __init__(self, OPS, rho, solver_type=None, M=None, backend_type='numpy'):
+        
+        # Extract solver type
+        solver_types = ['cg', 'cholesky']
+        if solver_type.lower() not in solver_types:
+            solver_type = 'cg'
+
+        n = OPS.n
+        d = OPS.d
+        P_S = OPS.P_S
+        
+        # Cholesky 
+        if solver_type == 'cholesky':
+            A = mnp.eye(2 * d * P_S, backend_type=backend_type)
+            for i in range(P_S):
+                for j in range(P_S):
+                    # perform multiplication 
+                    FiFj = OPS.F(i % P_S).T @ OPS.F(j % P_S) / rho
+                    # assign to four quadrants
+                    A[i*d:(i+1)*d, j*d:(j+1)*d] += FiFj
+                    A[(i+P_S)*d:(i+P_S+1)*d, (j)*d:(j+1)*d] += - FiFj
+                    A[(i)*d:(i+1)*d, (j+P_S)*d:(j+P_S+1)*d] += - FiFj
+                    A[(i+P_S)*d:(i+P_S+1)*d, (j+P_S)*d:(j+P_S+1)*d] += FiFj
+            for i in range(2):
+                for j in range(P_S):
+                    lower_ind = d * j + i * d * P_S
+                    upper_ind = d * (j+1) + i * d * P_S
+                    A[lower_ind:upper_ind, lower_ind:upper_ind] += OPS.G(j).T @ OPS.G(j)
+            self.L = mnp.cholesky(A)
+        
+        self.n = n
+        self.d = d
+        self.M = M
+        self.rho = rho
+        self.P_S = P_S
+        self.OPS = OPS
+        self.solver_type = solver_type
+        self.backend_type = backend_type
+    
+    def solve(self, b, max_cg_iter=10):
+        u = None
+        if self.solver_type == 'cg':
+            eps = 1e-10
+            u = mnp.zeros((2, self.d, self.P_S), backend_type=self.backend_type)
+            r = b.copy()
+            rho = r.flatten() @ r.flatten()
+            rho_prev = rho + 0.0
+            nrm = eps * mnp.sqrt(mnp.sum(b ** 2))
+            for k in range(max_cg_iter):
+                if mnp.sqrt(rho) <= nrm:
+                    break
+                
+                if k == 0:
+                    p = r.copy()
+                else:
+                    p = r + (rho / rho_prev) * p
+                
+                w = p.copy()
+                w += 1/self.rho * self.OPS.F_multop(self.OPS.F_multop(p), transpose=True)
+                w += self.OPS.G_multop(self.OPS.G_multop(p), transpose=True)
+                alpha = rho / (p.flatten() @ w.flatten())
+                u = u + alpha * p
+                r = r - alpha * w
+                rho_prev = rho.copy()
+                rho = r.flatten() @ r.flatten()
+        elif self.solver_type == 'cholesky':
+            b = tensor_to_vec(b)
+            bhat = mnp.solve_triangular(self.L, b, lower=True)
+            u = mnp.solve_triangular(self.L.T, bhat, lower=False)
+            u = vec_to_tensor(u, self.d, self.P_S)
+        return u
 
 """
 class to do F and G multiplicative operations a bit more memory efficiently
-# TODO: add docs and typing
 """
 class FG_Operators():
 
-    def __init__(self, d_diags, X):
+    def __init__(self, d_diags, X, backend_type='numpy'):
         n, P_S = d_diags.shape
         n, d = X.shape
         
@@ -120,7 +195,11 @@ class FG_Operators():
         self.d = d
         self.d_diags = d_diags
         self.X = X
-        self.backend_type = get_backend_type(X)
+        self.mem_save = False
+        self.backend_type = backend_type
+        
+        self.f_diag = mnp.vstack((1.0 * d_diags[None, ...], 
+                                      -1.0 * d_diags[None, ...]))
 
     # get matrix F_i
     def F(self, i):
@@ -133,29 +212,48 @@ class FG_Operators():
     # replace linop F * vec
     def F_multop(self, vec, transpose=False):
 
-        if transpose:
-            vec = vec.squeeze()
-            assert vec.shape == (self.n,)
-            out = mnp.zeros((2, self.d, self.P_S), backend_type=self.backend_type)
-            for i in range(self.P_S):
-                out[0,:,i] = self.F(i).T @ vec
-                out[1,:,i] -= self.F(i).T @ vec
+        if self.mem_save:
+            # @Zach's implimentation
+            if transpose:
+                vec = vec.squeeze()
+                assert vec.shape == (self.n,)
+                out = mnp.zeros((2, self.d, self.P_S))
+                for i in range(self.P_S):
+                    out[0,:,i] = self.F(i).T @ vec
+                    out[1,:,i] -= self.F(i).T @ vec
+            else:
+                assert vec.shape == (2, self.d, self.P_S)
+                out = mnp.zeros((self.n,), backend_type=self.backend_type)
+                for i in range(self.P_S):
+                    out += self.F(i) @ (vec[0,:,i] - vec[1,:,i])
         else:
-            assert vec.shape == (2, self.d, self.P_S)
-            out = mnp.zeros((self.n,), backend_type=self.backend_type)
-            for i in range(self.P_S):
-                out += self.F(i) @ (vec[0,:,i] - vec[1,:,i])
+            # @Daniel's implimentation
+            if transpose:
+                diags_to_vec = self.f_diag * vec.squeeze()[None, :, None]
+                out = mnp.sum(diags_to_vec[:, :, None, :] * self.X[None, :, :, None], axis=1)
+            else:
+                vec_times_X = self.X @ vec
+                out = mnp.sum(vec_times_X * self.f_diag, axis=(0, -1))
 
         return out
     
     # replace linop G * vec
     def G_multop(self, vec, transpose=False):
         
-        out = mnp.zeros((2, self.d if transpose else self.n, self.P_S), backend_type=self.backend_type)
+        if self.mem_save:
+            # @Zach's implimentation
+            out = mnp.zeros((2, self.d if transpose else self.n, self.P_S), backend_type=self.backend_type)
 
-        for i in range(self.P_S):
-            for j in range(2):
-                out[j,:,i] = (self.G(i).T if transpose else self.G(i)) @ vec[j,:,i]
+            for i in range(self.P_S):
+                for j in range(2):
+                    out[j,:,i] = (self.G(i).T if transpose else self.G(i)) @ vec[j,:,i]
+        else:
+            # @Daniel's implimentation
+            if transpose:
+                diags_to_vec = (2 * self.d_diags[None, ...] - 1) * vec
+                out = mnp.sum(diags_to_vec[:, :, None, :] * self.X[..., None], axis=1)
+            else:
+                out = (self.X @ vec) * (2 * self.d_diags[None, ...] - 1)
 
         return out
     
@@ -213,7 +311,6 @@ def vec_to_tensor(vec, d, P_S):
             inds = mnp.arange(d * j, d * (j + 1), backend_type=backend_type) + i * d * P_S
             tensor[i, :, j] = vec[inds]
     return tensor
-
 
 def proxl2(z, beta, gamma):
     """
