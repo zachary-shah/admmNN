@@ -6,8 +6,9 @@ import torch.nn.functional as F
 import numpy as np
 from math import ceil
 # Helper functions
-from utils import proxl2, generate_D
-from postprocess import calculate_cost, evaluate, evaluate2, recover_weights
+# from utils import proxl2, generate_D
+from rbcd.utils import proxl2, generate_D
+from rbcd.postprocess import calculate_cost, evaluate, evaluate2, recover_weights
 
 
 # RBCD params taken from standard heuristic

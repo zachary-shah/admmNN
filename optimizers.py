@@ -118,9 +118,15 @@ def admm_optimizer(parms: ADMM_Params,
         
         if parms.admm_cg_solve:
             solver_type = 'cg'
+            cg_params = parms.admm_cg_solve_params
         else:
             solver_type = 'cholesky'
-        ls = linear_sys(OPS, parms.rho, solver_type, backend_type=parms.datatype_backend)
+            cg_params = {}
+        ls = linear_sys(OPS=OPS, 
+                        rho=parms.rho, 
+                        cg_params=cg_params,
+                        solver_type=solver_type, 
+                        backend_type=parms.datatype_backend)
         b_1 = OPS.F_multop(y, transpose=True) / parms.rho
 
     elif parms.mode == "ADMM-RBCD":

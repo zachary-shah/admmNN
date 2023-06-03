@@ -913,3 +913,28 @@ def solve_triangular(a: ArrayType,
         return torch.linalg.solve_triangular(a, b, upper = not lower)
     else: # numpy
         return scipy_LA.solve_triangular(a, b, lower=lower)
+
+def inverse(A: ArrayType) -> ArrayType:
+    """
+    Computes the matrix inverse
+
+    Parameters
+    ----------
+    A : ArrayType
+        Square Matrix
+
+    Returns
+    -------
+    A_inv : ArrayType
+        Inverse of A
+    """
+
+    backend_type = get_backend_type(A)
+    
+    if backend_type == "jax":
+        return jnp.linalg.inv(A)
+    elif backend_type == "torch":
+        return torch.linalg.inv(A)
+    else: # numpy
+        return np.linalg.inv(A)
+    

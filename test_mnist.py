@@ -58,11 +58,11 @@ max_n = np.infty # max n to test (or limited by max n in data)
 """#################################################################"""
 
 # ------------ Train ADMM ----------
-def run_admm(X_train, y_train, X_test, y_test, params, optimizer, max_iter):
+def run_admm(X_train, y_train, X_test, y_test, params, max_iter):
     # using approximate admm solver
-    solver = CReLU_MLP(**params, optimizer=optimizer)
+    solver = CReLU_MLP(**params, X=X_train, y=y_train)
 
-    solver.optimize(X_train, y_train, max_iter=max_iter, verbose=True)
+    solver.optimize(max_iter=max_iter, verbose=True)
 
     y_hat_train = solver.predict(X_train)
     y_hat_test = solver.predict(X_test)
@@ -255,12 +255,12 @@ for (i,P_S) in enumerate(PS_vals):
 
     print(f"TRIALS FOR P_S={P_S} (size {i+1}/{len(PS_vals)})")
 
-    params = dict(m=P_S,
-             P_S=P_S,
+    params = dict(P_S=P_S,
              rho=rho,
              step=step,
              beta=beta,
              bias=bias,
+             admm_cg_solve=True,
              standardize_data=standardize_data,
              acc_func=binary_classifcation_accuracy,
     )
@@ -271,7 +271,7 @@ for (i,P_S) in enumerate(PS_vals):
             for (k, optimizer) in enumerate(optimizers):
                 if valid_optimizers[k]:
                     print(f"  {optimizer_labs[k]} trial {t+1}/{ntrials}")
-                    train_loss[k, i, t], _, train_acc[k,i, t], test_acc[k,i,t], solve_time[k, i,t] = run_admm(X_tr, y_tr,X_test,y_test,params,optimizer,max_iter)
+                    train_loss[k, i, t], _, train_acc[k,i, t], test_acc[k,i,t], solve_time[k, i,t] = run_admm(X_tr, y_tr,X_test,y_test,params,max_iter)
         except:
             print(f"Solve failed for {optimizer_labs[k]} trial {t+1}/{ntrials}")
             train_loss[k, i, :], train_acc[k,i, :], test_acc[k,i,:], solve_time[k,i,:]  = np.nan, np.nan, np.nan, np.nan
@@ -324,12 +324,12 @@ train_acc = np.zeros((nopt, len(nvals),ntrials)) * np.nan
 test_acc = np.zeros((nopt, len(nvals),ntrials)) * np.nan
 solve_time = np.zeros((nopt, len(nvals),ntrials)) * np.nan
 
-params = dict(m=P_S_for_varied_n,
-             P_S=P_S_for_varied_n,
+params = dict(P_S=P_S_for_varied_n,
              rho=rho,
              step=step,
              beta=beta,
              bias=bias,
+             admm_cg_solve=True,
              standardize_data=standardize_data,
              acc_func=binary_classifcation_accuracy,
 )
@@ -350,7 +350,7 @@ for (i,n) in enumerate(nvals):
             for (k, optimizer) in enumerate(optimizers):
                 if valid_optimizers[k]:
                     print(f"  {optimizer_labs[k]} trial {t+1}/{ntrials}")
-                    train_loss[k, i, t], _, train_acc[k,i, t], test_acc[k,i,t], solve_time[k, i,t] = run_admm(X_tr,y_tr,X_test,y_test,params,optimizer,max_iter)
+                    train_loss[k, i, t], _, train_acc[k,i, t], test_acc[k,i,t], solve_time[k, i,t] = run_admm(X_tr,y_tr,X_test,y_test,params,max_iter)
         except:
             print(f"Solve failed for {optimizer_labs[k]} trial {t+1}/{ntrials}")
             train_loss[k, i, :], train_acc[k,i, :], test_acc[k,i,:], solve_time[k,i,:]  = np.nan, np.nan, np.nan, np.nan

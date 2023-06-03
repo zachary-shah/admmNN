@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 
 # Helper functions
-from utils import relu
+from rbcd.utils import relu
 
 
 def calculate_cost(X, y, u, alpha, beta=1e-4, loss_type='mse', use_torch=False, verbose=True):

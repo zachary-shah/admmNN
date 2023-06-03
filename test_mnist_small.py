@@ -39,6 +39,7 @@ admm_config = dict(
     step=0.01,
     beta=0.001, 
     seed=seed,
+    admm_cg_solve=True,
 )
 
 # ----------- ADMM-RBCD solver params ------------

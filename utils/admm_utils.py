@@ -89,7 +89,11 @@ class ADMM_Params():
                 """
                 @Daniel: for you to populate parameters you would like to specify for conjugate gradient solve (preconditioners, etc.)
                 """
-                self.admm_cg_solve_params = {}
+                self.admm_cg_solve_params = {
+                    'cg_max_iters': 3,
+                    'cg_eps': 1e-2,
+                    'pcg': True,
+                }
             self.admm_cg_solve = admm_cg_solve
 
         elif mode == "ADMM-RBCD":
@@ -109,7 +113,7 @@ linear system solvers for ADMM
 """
 class linear_sys:
 
-    def __init__(self, OPS, rho, solver_type=None, M=None, backend_type='numpy'):
+    def __init__(self, OPS, rho, cg_params, solver_type=None, backend_type='numpy'):
         
         # Extract solver type
         solver_types = ['cg', 'cholesky']
@@ -138,42 +142,68 @@ class linear_sys:
                     upper_ind = d * (j+1) + i * d * P_S
                     A[lower_ind:upper_ind, lower_ind:upper_ind] += OPS.G(j).T @ OPS.G(j)
             self.L = mnp.cholesky(A)
+
+        if cg_params['pcg'] == True:
+
+            # Gen preconditioner
+            self.M = lambda x : x
         
         self.n = n
         self.d = d
-        self.M = M
         self.rho = rho
         self.P_S = P_S
         self.OPS = OPS
         self.solver_type = solver_type
         self.backend_type = backend_type
+        self.cg_params = cg_params
     
-    def solve(self, b, max_cg_iter=10):
+    def solve(self, b):
         u = None
         if self.solver_type == 'cg':
-            eps = 1e-10
+            eps = self.cg_params['cg_eps']
+            max_cg_iter = self.cg_params['cg_max_iters']
             u = mnp.zeros((2, self.d, self.P_S), backend_type=self.backend_type)
             r = b.copy()
-            rho = r.flatten() @ r.flatten()
-            rho_prev = rho + 0.0
             nrm = eps * mnp.sqrt(mnp.sum(b ** 2))
-            for k in range(max_cg_iter):
-                if mnp.sqrt(rho) <= nrm:
-                    break
-                
-                if k == 0:
-                    p = r.copy()
-                else:
-                    p = r + (rho / rho_prev) * p
-                
-                w = p.copy()
-                w += 1/self.rho * self.OPS.F_multop(self.OPS.F_multop(p), transpose=True)
-                w += self.OPS.G_multop(self.OPS.G_multop(p), transpose=True)
-                alpha = rho / (p.flatten() @ w.flatten())
-                u = u + alpha * p
-                r = r - alpha * w
+            if self.cg_params['pcg']:
+                z = self.M(r)
+                p = z.copy()
+                rho = r.flatten() @ z.flatten()
                 rho_prev = rho.copy()
+                for k in range(max_cg_iter):
+                    if mnp.sqrt(rho) <= nrm:# or np.linalg.norm(r) <= nrm:
+                        break
+                    
+                    w = p.copy()
+                    w += 1/self.rho * self.OPS.F_multop(self.OPS.F_multop(p), transpose=True)
+                    w += self.OPS.G_multop(self.OPS.G_multop(p), transpose=True)
+                    alpha = rho / (p.flatten() @ w.flatten())
+                    u = u + alpha * p
+                    r = r - alpha * w
+                    z = self.M(r)
+                    rho_prev = rho.copy()
+                    rho = z.flatten() @ r.flatten()
+                    p = z + p * (rho / rho_prev)
+            else:
                 rho = r.flatten() @ r.flatten()
+                rho_prev = rho + 0.0
+                for k in range(max_cg_iter):
+                    if mnp.sqrt(rho) <= nrm:
+                        break
+                    
+                    if k == 0:
+                        p = r.copy()
+                    else:
+                        p = r + (rho / rho_prev) * p
+                    
+                    w = p.copy()
+                    w += 1/self.rho * self.OPS.F_multop(self.OPS.F_multop(p), transpose=True)
+                    w += self.OPS.G_multop(self.OPS.G_multop(p), transpose=True)
+                    alpha = rho / (p.flatten() @ w.flatten())
+                    u = u + alpha * p
+                    r = r - alpha * w
+                    rho_prev = rho.copy()
+                    rho = r.flatten() @ r.flatten()
         elif self.solver_type == 'cholesky':
             b = tensor_to_vec(b)
             bhat = mnp.solve_triangular(self.L, b, lower=True)
@@ -331,3 +361,17 @@ def proxl2(z, beta, gamma):
         return res
     else:
         raise('Wrong dimensions')
+
+def hadamard(m, backend_type):
+    """
+    Computes mxm hadamard matrix
+    """
+
+    if m == 2:
+        return mnp.array([[1, 1],
+                         [1, -1]], backend_type=backend_type)
+    else:
+        Hm2 = hadamard(m//2, backend_type)
+        row2 = mnp.hstack((Hm2, -Hm2))
+        row1 = mnp.hstack((Hm2, Hm2))
+        return mnp.vstack((row1, row2))
