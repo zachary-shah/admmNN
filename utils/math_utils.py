@@ -530,6 +530,34 @@ def eye(N: int,
         if dtype is None: dtype = float
         return np.eye(N, M=M, dtype=dtype)
 
+def diag(diags: ArrayType,
+        backend_type: str = "numpy") -> ArrayType: 
+
+    """
+    Return a 2-D matrix with given diagonal entries
+
+    Parameters
+    ----------
+    diags : ArrayType
+      Diagonal entries
+      Data-type of the returned array. Must be either int or float.
+
+    Returns
+    -------
+    D : ArrayType 
+      Square diagonal matrix with diags as the diagonal entries
+    """
+    
+    assert backend_type in DATATYPE_BACKENDS, f"Input backend type {backend_type} incorrect; must be one of {DATATYPE_BACKENDS}"
+    
+    if backend_type == "jax":
+        return jnp.diag(diags)
+    elif backend_type == "torch":
+        return torch.diag(diags)
+    else: # else numpy
+        if dtype is None: dtype = float
+        return np.diag(diags)
+
 
 ########## MODIFY ARRAYS #########################
 
@@ -960,3 +988,56 @@ def inverse(A: ArrayType) -> ArrayType:
     else: # numpy
         return np.linalg.inv(A)
     
+def svd(A: ArrayType) -> ArrayType:
+    """
+    Computes the SVD of A
+
+    Parameters
+    ----------
+    A : ArrayType
+        Square Matrix
+
+    Returns
+    -------
+    U : ArrayType
+        Orthogonal matrix 'U'
+    s : ArrayType
+        singular values
+    Vt : ArrayType
+        Orthogonal matrix 'V' transpose
+    """
+
+    backend_type = get_backend_type(A)
+    
+    if backend_type == "jax":
+        return jnp.linalg.svd(A, full_matrices=False)
+    elif backend_type == "torch":
+        return torch.svd(A)
+    else: # numpy
+        return np.linalg.svd(A, full_matrices=False)
+
+def qr(A: ArrayType) -> ArrayType:
+    """
+    Computes the QR deomposition of A
+
+    Parameters
+    ----------
+    A : ArrayType
+        Square Matrix
+
+    Returns
+    -------
+    Q : ArrayType
+        Orthogonal matrix
+    R : ArrayType
+        Triangular matrix
+    """
+
+    backend_type = get_backend_type(A)
+    
+    if backend_type == "jax":
+        return jnp.linalg.qr(A)
+    elif backend_type == "torch":
+        return torch.qr(A)
+    else: # numpy
+        return np.linalg.qr(A)

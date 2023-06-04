@@ -92,7 +92,7 @@ class ADMM_Params():
                 self.admm_cg_solve_params = {
                     'cg_max_iters': 3,
                     'cg_eps': 1e-2,
-                    'pcg': True,
+                    'pcg': False,
                 }
             self.admm_cg_solve = admm_cg_solve
 
@@ -125,7 +125,7 @@ class linear_sys:
         P_S = OPS.P_S
         
         # Cholesky 
-        if solver_type == 'cholesky':
+        if solver_type == 'cholesky' or cg_params['pcg']:
             A = mnp.eye(2 * d * P_S, backend_type=backend_type)
             for i in range(P_S):
                 for j in range(P_S):
@@ -157,10 +157,18 @@ class linear_sys:
                     
             self.L = mnp.cholesky(A)
 
-        if cg_params['pcg'] == True:
+            if cg_params['pcg']:
 
-            # Gen preconditioner
-            self.M = lambda x : x
+                # Nys preconditiioner TODO            
+
+                # Diagonal precond
+                inds = mnp.arange(0, A.shape[0], backend_type=backend_type)
+                diags = A[inds, inds]
+                diags_tensor = vec_to_tensor(diags, d, P_S)
+                self.M = lambda u : u / diags_tensor
+
+                # No precond
+                # self.M = lambda u : u
         
         self.n = n
         self.d = d
