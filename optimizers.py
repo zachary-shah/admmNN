@@ -181,10 +181,17 @@ def admm_optimizer(parms: ADMM_Params,
         if parms.mode == "ADMM":
             v = mnp.relu(1 - parms.beta / (parms.rho * mnp.norm(u + lam, axis=1)[:, None, :])) * (u + lam)
         else:
-            # v update
-            v[0] = proxl2(u[0] + lam[0], beta=parms.beta, gamma=1 / parms.rho)
-            # w update
-            v[1] = proxl2(u[1] + lam[1], beta=parms.beta, gamma=1 / parms.rho)
+            # handle assignment for immutable arrays
+            if parms.datatype_backend == "jax":
+                # v update
+                v = v.at[0].set(proxl2(u[0] + lam[0], beta=parms.beta, gamma=1 / parms.rho))
+                # w update
+                v = v.at[1].set(proxl2(u[1] + lam[1], beta=parms.beta, gamma=1 / parms.rho))
+            else:
+                # v update
+                v[0] = proxl2(u[0] + lam[0], beta=parms.beta, gamma=1 / parms.rho)
+                # w update
+                v[1] = proxl2(u[1] + lam[1], beta=parms.beta, gamma=1 / parms.rho)
 
         time_v += perf_counter() - start
 

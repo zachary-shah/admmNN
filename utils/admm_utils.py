@@ -131,16 +131,30 @@ class linear_sys:
                 for j in range(P_S):
                     # perform multiplication 
                     FiFj = OPS.F(i % P_S).T @ OPS.F(j % P_S) / rho
+
                     # assign to four quadrants
-                    A[i*d:(i+1)*d, j*d:(j+1)*d] += FiFj
-                    A[(i+P_S)*d:(i+P_S+1)*d, (j)*d:(j+1)*d] += - FiFj
-                    A[(i)*d:(i+1)*d, (j+P_S)*d:(j+P_S+1)*d] += - FiFj
-                    A[(i+P_S)*d:(i+P_S+1)*d, (j+P_S)*d:(j+P_S+1)*d] += FiFj
+                    if backend_type == "jax":
+                        A = A.at[i*d:(i+1)*d, j*d:(j+1)*d].add(FiFj)
+                        A = A.at[(i+P_S)*d:(i+P_S+1)*d, (j)*d:(j+1)*d].add(- FiFj)
+                        A = A.at[(i)*d:(i+1)*d, (j+P_S)*d:(j+P_S+1)*d].add(- FiFj)
+                        A = A.at[(i+P_S)*d:(i+P_S+1)*d, (j+P_S)*d:(j+P_S+1)*d].add(FiFj)
+                    else:
+                        A[i*d:(i+1)*d, j*d:(j+1)*d] += FiFj
+                        A[(i+P_S)*d:(i+P_S+1)*d, (j)*d:(j+1)*d] += - FiFj
+                        A[(i)*d:(i+1)*d, (j+P_S)*d:(j+P_S+1)*d] += - FiFj
+                        A[(i+P_S)*d:(i+P_S+1)*d, (j+P_S)*d:(j+P_S+1)*d] += FiFj
+
             for i in range(2):
                 for j in range(P_S):
                     lower_ind = d * j + i * d * P_S
                     upper_ind = d * (j+1) + i * d * P_S
-                    A[lower_ind:upper_ind, lower_ind:upper_ind] += OPS.G(j).T @ OPS.G(j)
+
+                     # assign to four quadrants
+                    if backend_type == "jax":
+                        A = A.at[lower_ind:upper_ind, lower_ind:upper_ind].add(OPS.G(j).T @ OPS.G(j))
+                    else:                
+                        A[lower_ind:upper_ind, lower_ind:upper_ind] += OPS.G(j).T @ OPS.G(j)
+                    
             self.L = mnp.cholesky(A)
 
         if cg_params['pcg'] == True:
@@ -249,8 +263,12 @@ class FG_Operators():
                 assert vec.shape == (self.n,)
                 out = mnp.zeros((2, self.d, self.P_S))
                 for i in range(self.P_S):
-                    out[0,:,i] = self.F(i).T @ vec
-                    out[1,:,i] -= self.F(i).T @ vec
+                    if self.backend_type == "jax":
+                        out = out.at[0,:,i].set(self.F(i).T @ vec)
+                        out = out.at[1,:,i].set(- self.F(i).T @ vec)
+                    else:
+                        out[0,:,i] = self.F(i).T @ vec
+                        out[1,:,i] -= self.F(i).T @ vec
             else:
                 assert vec.shape == (2, self.d, self.P_S)
                 out = mnp.zeros((self.n,), backend_type=self.backend_type)
@@ -276,7 +294,10 @@ class FG_Operators():
 
             for i in range(self.P_S):
                 for j in range(2):
-                    out[j,:,i] = (self.G(i).T if transpose else self.G(i)) @ vec[j,:,i]
+                    if self.backend_type == "jax":
+                        out = out.at[j,:,i].set((self.G(i).T if transpose else self.G(i)) @ vec[j,:,i])
+                    else:
+                        out[j,:,i] = (self.G(i).T if transpose else self.G(i)) @ vec[j,:,i]
         else:
             # @Daniel's implimentation
             if transpose:
@@ -339,7 +360,10 @@ def vec_to_tensor(vec, d, P_S):
     for i in range(tensor.shape[0]):
         for j in range(tensor.shape[2]):
             inds = mnp.arange(d * j, d * (j + 1), backend_type=backend_type) + i * d * P_S
-            tensor[i, :, j] = vec[inds]
+            if backend_type == "jax":
+                tensor = tensor.at[i, :, j].set(vec[inds])
+            else:
+                tensor[i, :, j] = vec[inds]
     return tensor
 
 def proxl2(z, beta, gamma):
@@ -347,7 +371,6 @@ def proxl2(z, beta, gamma):
     Proximal l2 for ADMM update step on (v,w).
     TODO: add documentation, typing
     """
-
     if len(list(z.shape)) == 1:  # One-dimensional
         if mnp.norm(z) == 0:
             return z
@@ -357,7 +380,10 @@ def proxl2(z, beta, gamma):
         norms = mnp.norm(z, axis=0)
         mask = norms > 0
         res = mnp.zeros_like(z)
-        res[:, mask] = mnp.relu(1 - beta * gamma / norms[mask]) * z[:, mask]
+        if get_backend_type(z) == "jax":
+            res = res.at[:, mask].set(mnp.relu(1 - beta * gamma / norms[mask]) * z[:, mask])
+        else:
+            res[:, mask] = mnp.relu(1 - beta * gamma / norms[mask]) * z[:, mask]
         return res
     else:
         raise('Wrong dimensions')

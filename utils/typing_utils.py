@@ -34,34 +34,36 @@ def convert_backend_type(x: ArrayType,
     """
         
     assert target_backend in DATATYPE_BACKENDS, f"Parameter \"target_backend\" must be one of {DATATYPE_BACKENDS}." 
+
+    current_backend = get_backend_type(x)
     
     if target_backend == "torch":
         # convert numpy to torch
-        if type(x) in [np.ndarray, np.array]:
+        if current_backend == "numpy":
             if verbose: print("\tConverting data from numpy to torch.")
             return torch.from_numpy(x).float().to(device)
         # convert jax to torch
-        elif type(x) in [jnp.ndarray, jnp.array]:
+        elif current_backend == "jax":
             if verbose: print("\tConverting data from jax to torch.")
             return torch.from_numpy(np.asarray(x)).float().to(device)
         
     if target_backend== "jax":
         # convert numpy to jax
-        if type(x) in [np.ndarray, np.array]:
+        if current_backend == "numpy":
             if verbose: print("\tConverting data from numpy to jax.")
             return jnp.array(x)
         # convert torch to jax
-        elif torch.is_tensor(x):
+        elif current_backend == "torch":
             if verbose: print("\tConverting data from torch to jax.")
             return jnp.array(x.cpu().numpy())
         
     if target_backend == "numpy":
         # convert torch to numpy
-        if torch.is_tensor(x):
+        if current_backend == "torch":
             if verbose: print("\tConverting data from torch to numpy.")
             return x.cpu().numpy()
         # convert jax to numpy
-        elif type(x) in [jnp.ndarray, jnp.array]:
+        elif current_backend == "jax":
             if verbose: print("\tConverting data from jax to numpy.")
             return np.asarray(x)
         
@@ -75,9 +77,9 @@ def get_backend_type(x: ArrayType) -> str:
     Get the backend type for an array_like object
     """
         
-    if type(x) in [np.ndarray, np.array]:
+    if isinstance(x, np.ndarray):
         return "numpy"
-    elif type(x) in [jnp.ndarray, jnp.array]:
+    elif isinstance(x, jnp.ndarray):
         return "jax"
     elif torch.is_tensor(x):
         return "torch"

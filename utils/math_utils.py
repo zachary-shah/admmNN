@@ -118,9 +118,11 @@ def norm(x: ArrayType,
     n : ArrayType
        Norm of the matrix or vector(s)
     """
-    if type(x) in [jnp.ndarray, jnp.array]:
+    backend_type = get_backend_type(x)
+
+    if backend_type == "jax":
         return jnp.linalg.norm(x, ord=ord, axis=axis, keepdims=keepdims)
-    elif torch.is_tensor(x):
+    elif backend_type == "torch":
         return torch.linalg.norm(x, ord=ord, dim=axis, keepdim=keepdims)
     else: # else numpy
         return np.linalg.norm(x, ord=ord, axis=axis, keepdims=keepdims)
@@ -139,9 +141,12 @@ def sqrt(x: Union[float, ArrayType]) -> Union[float, ArrayType]:
     y : ArrayType
        An array of the same shape as x, containing the positive square-root of each element in x.
     """
-    if type(x) in [jnp.ndarray, jnp.array]:
+    
+    backend_type = get_backend_type(x)
+
+    if backend_type == "jax":
         return jnp.sqrt(x)
-    elif torch.is_tensor(x):
+    elif backend_type == "torch":
         return torch.sqrt(x)
     else: # else numpy
         return np.sqrt(x)
@@ -160,9 +165,11 @@ def log(x: Union[float, ArrayType]) -> Union[float, ArrayType]:
     y : ArrayType
        The natural logarithm of x, element-wise. This is a scalar if x is a scalar.
     """
-    if type(x) in [jnp.ndarray, jnp.array]:
+    backend_type = get_backend_type(x)
+
+    if backend_type == "jax":
         return jnp.log(x)
-    elif torch.is_tensor(x):
+    elif backend_type == "torch":
         return torch.log(x)
     else: # else numpy
         return np.log(x)
@@ -181,9 +188,11 @@ def exp(x: Union[float, ArrayType]) -> Union[float, ArrayType]:
     y : ArrayType
        Output array, element-wise exponential of x. This is a scalar if x is a scalar.
     """
-    if type(x) in [jnp.ndarray, jnp.array]:
+    backend_type = get_backend_type(x)
+
+    if backend_type == "jax":
         return jnp.exp(x)
-    elif torch.is_tensor(x):
+    elif backend_type == "torch":
         return torch.exp(x)
     else: # else numpy
         return np.exp(x)
@@ -416,9 +425,11 @@ def zeros_like(x: ArrayType) -> ArrayType:
         An array with shape `x.shape` with all zero values.
     """
     
-    if type(x) in [jnp.ndarray, jnp.array]:
+    backend_type = get_backend_type(x)
+
+    if backend_type == "jax":
         return jnp.zeros_like(x)
-    elif torch.is_tensor(x):
+    elif backend_type == "torch":
         return torch.zeros_like(x)
     else: # else numpy
         return np.zeros_like(x)
@@ -439,9 +450,11 @@ def ones_like(x: ArrayType) -> ArrayType:
         An array with shape `x.shape` with all ones values.
     """
     
-    if type(x) in [jnp.ndarray, jnp.array]:
+    backend_type = get_backend_type(x)
+
+    if backend_type == "jax":
         return jnp.ones_like(x)
-    elif torch.is_tensor(x):
+    elif backend_type == "torch":
         return torch.ones_like(x)
     else: # else numpy
         return np.ones_like(x)
@@ -547,9 +560,12 @@ def append(arr: ArrayType,
         filled.  If `axis` is None, `out` is a flattened array.
     """
     assert type(arr) == type(values), f"Typematch error. Arr1 is type {type(arr)}, but Arr2 is type {type(values)}."
-    if type(arr) in [jnp.ndarray, jnp.array]:
+    
+    backend_type = get_backend_type(arr)
+
+    if backend_type == "jax":
         return jnp.append(arr, values, axis=axis)
-    elif torch.is_tensor(arr):
+    elif backend_type == "torch":
         return torch.cat((arr, values), dim=axis)
     else: # else numpy
         return np.append(arr, values, axis=axis)
@@ -574,10 +590,11 @@ def hstack(tup: Sequence[ArrayType]) -> ArrayType:
     stacked : ArrayType
         The array formed by stacking the given arrays.
     """
-    
-    if type(tup[0]) in [jnp.ndarray, jnp.array]:
+    backend_type = get_backend_type(tup[0])
+
+    if backend_type == "jax":
         return jnp.hstack(tup)
-    elif torch.is_tensor(tup[0]):
+    elif backend_type == "torch":
         return torch.hstack(tup)
     else: # else numpy
         return np.hstack(tup)
@@ -603,9 +620,11 @@ def vstack(tup: Sequence[ArrayType]) -> ArrayType:
         The array formed by stacking the given arrays.
     """
     
-    if type(tup[0]) in [jnp.ndarray, jnp.array]:
+    backend_type = get_backend_type(tup[0])
+
+    if backend_type == "jax":
         return jnp.vstack(tup)
-    elif torch.is_tensor(tup[0]):
+    elif backend_type == "torch":
         return torch.vstack(tup)
     else: # else numpy
         return np.vstack(tup)
@@ -705,10 +724,12 @@ def unique(ar: ArrayType,
     unique : ArrayType
         The sorted unique values.
     """
-    
-    if type(ar) in [jnp.ndarray, jnp.array]:
+
+    backend_type = get_backend_type(ar)
+
+    if backend_type == "jax":
         return jnp.unique(ar, axis=axis)
-    elif torch.is_tensor(ar):
+    elif backend_type == "torch":
         return torch.unique(ar, sorted=True, dim=axis)
     else: # else numpy
         return np.unique(ar, axis=axis)
@@ -735,7 +756,8 @@ def randn(size: Sequence[int],
     assert backend_type in DATATYPE_BACKENDS, f"Input backend type {backend_type} incorrect; must be one of {DATATYPE_BACKENDS}"
 
     if backend_type == "jax":
-        return jnp.random.randn(*size)
+        y = np.random.randn(*size)
+        return convert_backend_type(y, target_backend="jax")
     elif backend_type == "torch":
         return torch.randn(*size)
     else: # else numpy
@@ -763,7 +785,8 @@ def rand(size: Sequence[int],
     assert backend_type in DATATYPE_BACKENDS, f"Input backend type {backend_type} incorrect; must be one of {DATATYPE_BACKENDS}"
 
     if backend_type == "jax":
-        return jnp.random.rand(*size)
+        y = np.random.rand(*size)
+        return convert_backend_type(y, target_backend="jax")
     elif backend_type == "torch":
         return torch.rand(*size)
     else: # else numpy
@@ -813,7 +836,6 @@ def random_choice(a: Union[ArrayType, int],
     # numpy and torch both use np array indexing
     else:
         return i
-
 
 ############ LINEAR ALGEBRA ####################
 

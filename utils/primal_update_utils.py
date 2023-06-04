@@ -9,94 +9,6 @@ from utils.typing_utils import ArrayType, EvalFunction
 from utils.admm_utils import FG_Operators, ADMM_Params, vec_to_tensor, tensor_to_vec
 import utils.math_utils as mnp
 
-# """
-# Performs RBCD updates step for ADMM-RBCD descent
-# """
-# def RBCD_update(parms: ADMM_Params, 
-#                 OPS: FG_Operators, 
-#                 y: ArrayType, 
-#                 y_hat: ArrayType, 
-#                 u: ArrayType, 
-#                 v: ArrayType, 
-#                 s: ArrayType, 
-#                 nu: ArrayType, 
-#                 lam: ArrayType, 
-#                 GiTGi: ArrayType, 
-#                 loss_func: EvalFunction,
-#                 verbose: bool = False) -> Tuple[ADMM_Params, ArrayType]:
-    
-#     if verbose: print("  Beginning RBCD update...")
-
-#     e_diags = 2 * OPS.d_diags - 1
-    
-#     # Initialize objective
-#     y_hat = mnp.sum((OPS.d_diags * (OPS.X @ (u[0] - u[1]))), axis=1)
-
-#     stil = OPS.X.T @ (e_diags * (s - nu))
-#     #stil = OPS.G_multop(s - nu, transpose=True)
-
-#     dcosts = mnp.ones(ceil(parms.base_buffer_size * mnp.sqrt(parms.P_S / parms.RBCD_blocksize))) * 1e8
-#     ptr, k = 0, 0  # k is current count of iterations
-#     while dcosts.mean() > parms.RBCD_thresh:
-#         k += 1
-#         i = mnp.random_choice(parms.P_S, size=parms.RBCD_blocksize, replace=False)
-
-#         # Calculate training loss via u and z (without regularization) and get gradients
-#         loss1 = loss_func(y_hat, y)
-
-#         if parms.loss_type == 'mse':
-#             grad1 = OPS.X.T @ (OPS.d_diags[:, i] * (y_hat - y)[:,None])
-#         elif parms.loss_type == 'ce':
-#             grad1 = OPS.X.T @ (OPS.d_diags[:, i] * (-2 * y + 2 / (1 + mnp.exp(-2 * y_hat)))[:,None])
-
-#         grad2u = u[0][:, i] - v[0][:, i] + lam[0][:, i] + GiTGi @ u[0][:, i] - stil[0][:, i]
-#         grad2z = u[1][:, i] - v[1][:, i] + lam[1][:, i] + GiTGi @ u[1][:, i] - stil[1][:, i]
-#         gradu = grad1 + parms.rho * grad2u
-#         gradz = -grad1 + parms.rho * grad2z
-
-#         # ----------- Determine the step size using line search -----------------
-#         alpha = parms.alpha0
-#         while True:  # Emulate a do-while loop
-#             du = -alpha * gradu
-#             dz = -alpha * gradz
-
-#             # Current prediction (via convex formulation)
-#             yhat_new = y_hat + mnp.sum(OPS.d_diags[:, i] * (OPS.X @ (du - dz)), axis=1)
-            
-#             # compute loss
-#             dloss = loss_func(yhat_new, y) - loss1
-
-#             ddist1 = ((u[0][:, i] + du - v[0][:, i] + lam[0][:, i]) ** 2).sum() + \
-#                     ((u[1][:, i] + dz - v[1][:, i] + lam[1][:, i]) ** 2).sum() - \
-#                     ((u[0][:, i] - v[0][:, i] + lam[0][:, i]) ** 2).sum() + \
-#                     ((u[1][:, i] - v[1][:, i] + lam[1][:, i]) ** 2).sum()
-
-#             ddist2 = ((e_diags[:, i] * (OPS.X @ (u[0][:, i] + du)) - s[0][:, i] + nu[0][:, i]) ** 2).sum() + \
-#                     ((e_diags[:, i] * (OPS.X @ (u[1][:, i] + dz)) - s[1][:, i] + nu[1][:, i]) ** 2).sum() - \
-#                     ((e_diags[:, i] * (OPS.X @ u[0][:, i]) - s[0][:, i] + nu[0][:, i]) ** 2).sum() - \
-#                     ((e_diags[:, i] * (OPS.X @ u[1][:, i]) - s[1][:, i] + nu[1][:, i]) ** 2).sum()
-#             dcost = dloss + (ddist1 + ddist2) * parms.rho / 2
-
-#             # Armijo's rule
-#             if alpha <= 1e-8 or dcost <= -1e-3 * mnp.sqrt((du ** 2).sum() + (dz ** 2).sum()):
-#                 break
-#             alpha /= 2.5
-#             # Decaying basic step size
-#             parms.alpha0 = mnp.maximum(1e-10, parms.alpha0 / 1.5)
-
-#         # Update u, z, and objective
-#         u[0][:, i] += du
-#         u[1][:, i] += dz
-#         dcosts[ptr] = -dcost
-#         # Update circular buffer
-#         ptr = (ptr + 1) % ceil(parms.base_buffer_size * mnp.sqrt(parms.P_S / parms.RBCD_blocksize))
-#         parms.alpha0 *= 1.05
-#         if verbose and k % 20 == 0:
-#             print('      Iteration', k, ', alpha:', alpha, ', delta:', dcosts.mean().item())
-
-#     return parms, u
-
-
 """
 Performs RBCD updates step for ADMM-RBCD descent
 """
@@ -183,9 +95,14 @@ def RBCD_update(parms: ADMM_Params,
             parms.alpha0 = mnp.maximum(1e-10, parms.alpha0 / 1.5)
 
         # Update u, z, and objective
-        u[:, i] += du
-        z[:, i] += dz
-        dcosts[ptr] = -dcost
+        if parms.datatype_backend == "jax":
+            u.at[:, i].add(du)
+            z.at[:, i].add(dz)
+            dcosts.at[ptr].add(-dcost)
+        else:
+            u[:, i] += du
+            z[:, i] += dz
+            dcosts[ptr] = -dcost
         # Update circular buffer
         ptr = (ptr + 1) % ceil(parms.base_buffer_size * mnp.sqrt(parms.P_S / parms.RBCD_blocksize))
         parms.alpha0 *= 1.05
@@ -194,10 +111,15 @@ def RBCD_update(parms: ADMM_Params,
 
     # concatenate
     u_out = mnp.zeros_like(u_orig)
-    u_out[0] = u.copy()
-    u_out[1] = z.copy()
 
-    return parms, u_out.copy()
+    if parms.datatype_backend == "jax":
+        u_out.at[0] = u
+        u_out.at[1] = z
+    else:
+        u_out[0] = u.copy()
+        u_out[1] = z.copy()
+
+    return parms, u_out
 
 
 
