@@ -14,7 +14,7 @@ from utils.load_data import load_mnist
 """################ PARAMETERS FOR DATA GENERATION ###################"""
 
 # ----------- Data parameters ------------
-dataset_path = "baADMM/Convex-NN-Journal/Datasets/mnist.pkl.gz"
+dataset_path = "baADMM/datasets/mnist.pkl.gz"
 downsample = True # downsample data dim to 100 if True
 standardize_data = False # standardize X to zero-mean unit-variance before optimizing
 bias = True # add bias term to weights

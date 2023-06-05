@@ -9,9 +9,6 @@ from utils.typing_utils import ArrayType, EvalFunction
 from utils.admm_utils import FG_Operators, ADMM_Params, vec_to_tensor, tensor_to_vec
 import utils.math_utils as mnp
 
-"""
-Performs RBCD updates step for ADMM-RBCD descent
-"""
 def RBCD_update(parms: ADMM_Params, 
                 OPS: FG_Operators, 
                 y: ArrayType, 
@@ -24,17 +21,20 @@ def RBCD_update(parms: ADMM_Params,
                 GiTGi: ArrayType, 
                 loss_func: EvalFunction,
                 verbose: bool = False) -> Tuple[ADMM_Params, ArrayType]:
-    
+    """
+    Performs RBCD updates step for ADMM-RBCD descent
+    """
+
     if verbose: print(f"  Beginning RBCD update...\n\tloss = {parms.loss_type}, \n\tloss_func = {loss_func}")
 
     emat = 2 * OPS.d_diags - 1
     dmat = OPS.d_diags
 
-    u_orig = u.copy()
-    v_orig = v.copy()
-    s_orig = s.copy()
-    lam_orig = lam.copy()
-    nu_orig = nu.copy()
+    u_orig = mnp.copy(u)
+    v_orig = mnp.copy(v)
+    s_orig = mnp.copy(s)
+    lam_orig = mnp.copy(lam)
+    nu_orig = mnp.copy(nu)
 
     u, z = u_orig[0], u_orig[1]
     v, w = v_orig[0], v_orig[1]
@@ -49,7 +49,8 @@ def RBCD_update(parms: ADMM_Params,
 
     dcosts = mnp.ones(ceil(parms.base_buffer_size * mnp.sqrt(parms.P_S / parms.RBCD_blocksize)), backend_type=parms.datatype_backend) * 1e8
     ptr, k = 0, 0  # k is current count of iterations
-    while dcosts.mean() > parms.RBCD_thresh:
+    max_iter = 2000 #temporary max iteration for debugging; TODO: remove or parameterize
+    while mnp.mean(dcosts) > parms.RBCD_thresh and k < max_iter:
         k += 1
         i = mnp.random_choice(parms.P_S, size=parms.RBCD_blocksize, replace=False, backend_type=parms.datatype_backend)
 
@@ -96,76 +97,29 @@ def RBCD_update(parms: ADMM_Params,
 
         # Update u, z, and objective
         if parms.datatype_backend == "jax":
-            u.at[:, i].add(du)
-            z.at[:, i].add(dz)
-            dcosts.at[ptr].add(-dcost)
+            u = u.at[:, i].add(du)
+            z = z.at[:, i].add(dz)
+            dcosts = dcosts.at[ptr].add(-dcost)
         else:
             u[:, i] += du
             z[:, i] += dz
             dcosts[ptr] = -dcost
+
         # Update circular buffer
         ptr = (ptr + 1) % ceil(parms.base_buffer_size * mnp.sqrt(parms.P_S / parms.RBCD_blocksize))
         parms.alpha0 *= 1.05
         if verbose and k % 20 == 0:
-            print('\tIteration', k, ', alpha:', alpha, ', delta:', dcosts.mean())
+            print('\tIteration', k, ', alpha:', alpha, ', delta:', mnp.mean(dcosts))
 
     # concatenate
     u_out = mnp.zeros_like(u_orig)
 
     if parms.datatype_backend == "jax":
-        u_out.at[0] = u
-        u_out.at[1] = z
+        u_out = u_out.at[0].set(u)
+        u_out = u_out.at[1].set(z)
     else:
-        u_out[0] = u.copy()
-        u_out[1] = z.copy()
+        u_out[0] = u
+        u_out[1] = z
 
     return parms, u_out
 
-
-
-"""
-Performs Full ADMM update step using precomputed cholesky for linear systems solve
-"""
-def ADMM_full_update(parms: ADMM_Params, 
-                     OPS: FG_Operators, 
-                     v: ArrayType, 
-                     s: ArrayType, 
-                     nu: ArrayType, 
-                     lam: ArrayType, 
-                     L: ArrayType, 
-                     b_1: ArrayType, 
-                     ) -> ArrayType:
-                    
-    if parms.loss_type == "mse":
-        b = tensor_to_vec(b_1 + v - lam + OPS.G_multop(s - nu, transpose=True))
-        bhat = mnp.solve_triangular(L, b, lower=True)
-        u = vec_to_tensor(mnp.solve_triangular(L.T, bhat, lower=False), OPS.d, OPS.P_S)
-    elif parms.loss_type == "ce":
-        raise NotImplementedError("Cross-entropy loss not yet implemented for full ADMM update.")
-
-    return u
-
-"""
-Approximates Full ADMM update step using conjugate gradient
-"""
-def ADMM_cg_update(parms: ADMM_Params, 
-                   OPS: FG_Operators, 
-                   v: ArrayType, 
-                   s: ArrayType, 
-                   nu: ArrayType, 
-                   lam: ArrayType, 
-                   A: ArrayType, 
-                   b_1: ArrayType, 
-                   ) -> ArrayType:
-
-    """
-    @Daniel: Implement CG with preconditioners here
-        - use parms.cg_params to specify stuff about preconditioners in admm_utils.ADMM_Params
-    """
-
-    assert parms.loss_type == "mse", "Conjugate Gradient can only be used for loss_type=\"mse\"."
-
-
-    raise NotImplementedError("Conjugate Gradient sovle for ADMM full step still to be impemented.")
-
-    return u

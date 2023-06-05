@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler
 
 from optimizers import admm_optimizer, cvxpy_optimizer
 
-from utils.relu_utils import squared_loss, cross_entropy_loss, classifcation_accuracy
+from utils.relu_utils import squared_loss, cross_entropy_loss, classifcation_accuracy, optimal_weights_transform
 from utils.admm_utils import ADMM_Params, OPTIM_MODES
 from utils.typing_utils import ArrayType, EvalFunction, DATATYPE_BACKENDS, convert_backend_type
 
@@ -54,10 +54,10 @@ class CReLU_MLP():
         self.X, self.y = X, y 
         self.num_features = X.shape[1]
 
-        # auto-set P_S value by using sqrt of shape. TODO: set better heuristic for this
+        # auto-set P_S value by using sqrt of feature dimension. TODO: set better heuristic for this
         if P_S is None: 
-            P_S = int(mnp.sqrt(X.shape[0]))
-            if verbose_initialization: print(f"\tAuto-setting P_S to {P_S}")
+            P_S = int(mnp.sqrt(X.shape[1]))
+            if verbose_initialization: print(f"\tAuto-setting P_S to sqrt of number of features: P_S={P_S}")
 
         # decide on optimizer function
         self.optimizer_mode = optimizer_mode
@@ -113,7 +113,7 @@ class CReLU_MLP():
         self.alpha = None
 
         # optimization metrics for keeping track of performance
-        self.metrics = {}
+        self.training_metrics = {}
 
         # flag to ensure predictions only enabled after optimization called
         self.optimized = False
@@ -124,31 +124,44 @@ class CReLU_MLP():
     Optimize cvx neural network with initialized optimization parameters
         :param max_iter (optional) - max iterations for ADMM algorithm
         :param verbose (optional) - true to print live optimiation progress
+        :param X_val (optional) - optionally provide validation data to get val accuracy during each iteration
+        :param y_val (optional) - labels associated with validation data
     """
     def optimize(self,
                  max_iter: int = 100, 
-                 verbose: bool = False) -> None:
+                 verbose: bool = False,
+                 X_val: ArrayType = None,
+                 y_val: ArrayType = None,):
 
         # preprocess training data
-        self.X = self._preprocess_data(self.X)
+        self.X, self.y = self._preprocess_data(self.X, y=self.y)
+
+        # if provided, also preprocess validation data
+        if X_val is not None and y_val is not None:
+            val_data = self._preprocess_data(X_val, y=y_val)
+        else:
+            val_data = None
 
         # solve optimization problem
         t_start = perf_counter()
-        self.v, self.w, self.metrics = self.optimizer(self.parms, 
+        self.v, self.w, self.training_metrics = self.optimizer(self.parms, 
                                                       self.X, 
                                                       self.y, 
                                                       loss_func = self.loss_func, 
                                                       acc_func = self.acc_func, 
                                                       max_iter = max_iter, 
-                                                      verbose = verbose)
-        self.metrics["solve_time"] = perf_counter() - t_start
+                                                      verbose = verbose,
+                                                      val_data = val_data)
+        self.training_metrics["solve_time"] = perf_counter() - t_start
 
         # recover u1.... u_ms and alpha1 ... alpha_ms as Optimal Weights of NC-ReLU Problem
-        self._optimal_weights_transform(verbose=verbose)
+        self.u, self.alpha = optimal_weights_transform(self.v, self.w, self.parms.P_S, self.parms.d, verbose=verbose)
 
         self.optimized = True
 
         if verbose: print("\nOptimization complete! Ready for application with .predict().\n")
+
+        return self.training_metrics
 
     """
     Predict classes given new data X
@@ -160,7 +173,7 @@ class CReLU_MLP():
         assert self.optimized is True, "Must call .optimize() before applying predictions."
         assert len(X.shape) == 2, "X must be 2 dimensional array"
         assert X.shape[1] == self.num_features, f"X must have same feature size as trained data (d={self.num_features})"
-        
+
         X = self._preprocess_data(X)
 
         # prediction using weights for equivalent nonconvex problem
@@ -169,17 +182,18 @@ class CReLU_MLP():
         return y_hat
     
     """
-    Get metrics from solver
+    Get training metrics from solver
     """
-    def get_metrics(self) -> dict:
+    def get_training_metrics(self) -> dict:
         assert self.optimized is True, "Must call .optimize() to solve problem first."
-        return self.metrics
+        return self.training_metrics
     
     """
-    Preprocess the data X based on desired inputs (standardization, bias, etc)
+    Preprocess the data X (and optionally labels y) based on desired inputs (standardization, bias, etc)
     """
     def _preprocess_data(self, 
-                         X: ArrayType) -> ArrayType:
+                         X: ArrayType,
+                         y: ArrayType = None) -> ArrayType:
         
         # standardize data if desired
         if self.standardize_data:
@@ -194,48 +208,13 @@ class CReLU_MLP():
         # add bias term to data if desired
         if self.bias:
             X = mnp.hstack([X, mnp.ones((X.shape[0],1), backend_type=self.datatype_backend)])
-        return X
-        
-    """
-    Given optimal v^*, w^* of convex problem (Eq (2.1)), derive the optimal weights u^*, alpha^* of the non-convex probllem (Eq (2.1))
-    Applies Theorem 1 of Pilanci, Ergen 2020
-    """
-    def _optimal_weights_transform(self, 
-                                   verbose: bool = False) -> None:
-        
-        assert self.v is not None
-        assert self.w is not None
 
-        if self.v.shape == (self.parms.P_S, self.parms.d):
-            self.v = self.v.T
-        if self.w.shape == (self.parms.P_S, self.parms.d):
-            self.w = self.w.T
-
-        # ensure shapes are correct
-        assert self.v.shape == (self.parms.d, self.parms.P_S), f"Expected weight v shape to be ({self.parms.d},{self.parms.P_S}), but got {self.v.shape}"
-        assert self.w.shape == (self.parms.d, self.parms.P_S), f"Expected weight w shape to be ({self.parms.d},{self.parms.P_S}), but got {self.w.shape}"
-
-        if verbose: 
-            print(f"\nDoing weight transform: ")
-            v_shp = self.v.cpu().numpy().shape if self.datatype_backend == "torch" else self.v.shape
-            w_shp = self.w.cpu().numpy().shape if self.datatype_backend == "torch" else self.w.shape
-            print(f"  starting v shape: {v_shp}")
-            print(f"  starting w shape: {w_shp}")
-            print(f"  P_S: {self.parms.P_S}")
-            print(f"  d: {self.parms.d}")
-
-        alpha1 = mnp.sqrt(mnp.norm(self.v, 2, axis=0))
-        mask1 = alpha1 != 0
-        u1 = self.v[:, mask1] / alpha1[mask1]
-        alpha2 = -mnp.sqrt(mnp.norm(self.w, 2, axis=0))
-        mask2 = alpha2 != 0
-        u2 = -self.w[:, mask2] / alpha2[mask2]
-
-        self.u = mnp.append(u1, u2, axis=1)
-        self.alpha = mnp.append(alpha1[mask1], alpha2[mask2])
-
-        if verbose: 
-            u_shp = self.u.cpu().numpy().shape if self.datatype_backend == "torch" else self.u.shape
-            a_shp = self.alpha.cpu().numpy().shape if self.datatype_backend == "torch" else self.alpha.shape
-            print(f"  transfomred u shape: {u_shp}")
-            print(f"  transformed alpha shape: {a_shp}")  
+        # convert labels if provided
+        if y is not None:
+            if len(y.shape) == 1: y = y[:,None]
+            assert len(y.shape) == 2, "Y must have shape of (n,) or (n,1)"
+            assert y.shape[0] == X.shape[0], "y must have n labels" 
+            y = convert_backend_type(y, self.datatype_backend, device=self.device)
+            return X, y
+        else:
+            return X

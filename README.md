@@ -11,18 +11,18 @@ Repo now has the following improvements implemented:
 
 
 Things still to-do to validate repo: 
-- [ ] Rewrite test_mnist.py to work with new runner config - Zach
+- [x] Rewrite test_mnist.py to work with new runner config - Zach
 - [ ] Finish docs - Zach
      - [ ] relu_solver.py docs
      - [ ] optimizers.py docs
      - [ ] 
-- [ ] Validate numpy backend
-- [ ] Validate torch backend - Miria
-- [ ] Validate jax backend
+- [x] Validate numpy backend
+- [x] Validate torch backend - Miria
+- [x] Validate jax backend
     - [ ] Implement full jax backend (only added function wrappers) - Miria
-- [ ] Implement ADMM CG - Daniel 
-    - [ ] Add appropriate parameters for CG / PCG in utils.admm_utils.ADMM_Params
-    - [ ] Implement CG / PCG in utils.primal_update_utils.ADMM_cg_update()
+- [x] Implement ADMM CG - Daniel 
+    - [x] Add appropriate parameters for CG / PCG in utils.admm_utils.ADMM_Params
+    - [x] Implement CG / PCG in utils.primal_update_utils.ADMM_cg_update()
 
 ### Todo List
 
@@ -40,8 +40,8 @@ Algorithms and Adversarial Training](https://arxiv.org/pdf/2201.01965.pdf)
 Before Midterm Report (4/15)
 - [x] Test against PyTorch on problem with known exact solution (MNIST subset with 100% accuracy easy and possible) *Due Sunday*
 - [ ] Improve time complexity of Ax = b
-    - [ ] Try other pre-conditioners besides Cholesky for linear sys solving (Miria)
-    - [ ] Conjugate Gradient steps to solve (Daniel) 
+    - [x] Try other pre-conditioners besides Cholesky for linear sys solving (Miria)
+    - [x] Conjugate Gradient steps to solve (Daniel) 
 - [x] Summarize results in midterm writeup 
 
 For Final Project 

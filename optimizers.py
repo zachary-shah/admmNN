@@ -6,10 +6,12 @@ import numpy as np
 import numpy.linalg as LA
 import cvxpy as cp
 from time import perf_counter
+from typing import Tuple, Union
 
 from utils.typing_utils import ArrayType, EvalFunction
-from utils.admm_utils import ADMM_Params, FG_Operators, get_hyperplane_cuts, tensor_to_vec, proxl2, linear_sys
-from utils.primal_update_utils import RBCD_update, ADMM_full_update, ADMM_cg_update
+from utils.admm_utils import ADMM_Params, FG_Operators, Linear_Sys, get_hyperplane_cuts, tensor_to_vec, proxl2
+from utils.primal_update_utils import RBCD_update
+from utils.relu_utils import optimal_weights_transform
 
 import utils.math_utils as mnp
 
@@ -22,10 +24,17 @@ def cvxpy_optimizer(parms: ADMM_Params,
                     loss_func: EvalFunction,
                     acc_func: EvalFunction,
                     max_iter: int, 
+                    val_data: Union[None, Tuple[ArrayType, ArrayType]] = None,
                     verbose: bool = False,
                     ):
     
     if verbose: print(f"Beginning optimization! Mode: {parms.mode}")
+
+    # add validation if desired
+    validate = False
+    if val_data is not None:
+        validate = True
+        X_val, y_val = val_data
 
     # Setup / Variables
     solver_metrics = {}
@@ -67,6 +76,16 @@ def cvxpy_optimizer(parms: ADMM_Params,
     solver_metrics["train_loss"] = mnp.array([loss_func(y_hat, y)] * max_iter)
     solver_metrics["train_acc"] = mnp.array([acc_func(y_hat, y)] * max_iter)
 
+    # add validation metrics if provided
+    if validate:
+
+        alpha, u = optimal_weights_transform(v, w, P_S, d, verbose=verbose)
+        y_hat_val = mnp.relu(X_val @ u) @ alpha
+
+        y_hat = (F @ (v.value - w.value))
+        solver_metrics["val_loss"] = mnp.array([loss_func(y_hat_val, y_val)] * max_iter)
+        solver_metrics["val_acc"] = mnp.array([acc_func(y_hat_val, y_val)] * max_iter)
+
     return v, w, solver_metrics
 
 
@@ -79,6 +98,7 @@ def admm_optimizer(parms: ADMM_Params,
                     loss_func: EvalFunction,
                     acc_func: EvalFunction,
                     max_iter: int, 
+                    val_data: Union[None, Tuple[ArrayType, ArrayType]] = None,
                     verbose: bool = False,
                     ):
     
@@ -95,8 +115,14 @@ def admm_optimizer(parms: ADMM_Params,
     print(f"\td_diags.shape: {d_diags.shape}")
 
     # utility operator to memory-efficient compute F*u and G*u
-    OPS = FG_Operators(d_diags=d_diags, X=X)
-    
+    OPS = FG_Operators(d_diags=d_diags, X=X, rho=parms.rho, mem_save=parms.memory_save)
+
+    # get validation data if provided
+    validate = False
+    if val_data is not None:
+        X_val, y_val = val_data
+        validate = True
+
     # --------------- Init Optim Params ---------------
     # u contains u1 ... uP, z1... zP 
     u = mnp.zeros((2, d, P_S), backend_type=parms.datatype_backend)
@@ -115,24 +141,19 @@ def admm_optimizer(parms: ADMM_Params,
     if verbose: print("  Completing precomputations...")
 
     if parms.mode == "ADMM":
+
+        # do precomputations in initialization of the linear system
+        ls = Linear_Sys(OPS=OPS, 
+                        params=parms,
+                        verbose=verbose)
         
-        if parms.admm_cg_solve:
-            solver_type = 'cg'
-            cg_params = parms.admm_cg_solve_params
-        else:
-            solver_type = 'cholesky'
-            cg_params = {}
-        ls = linear_sys(OPS=OPS, 
-                        rho=parms.rho, 
-                        cg_params=cg_params,
-                        solver_type=solver_type, 
-                        backend_type=parms.datatype_backend)
         b_1 = OPS.F_multop(y, transpose=True) / parms.rho
 
     elif parms.mode == "ADMM-RBCD":
         # compute Xi.T @ X only for this 
         GiTGi = X.T @ X
         y = y.squeeze()
+
     else:
         raise NotImplementedError("Unexpected mode for ADMM optimization.")
     
@@ -148,15 +169,13 @@ def admm_optimizer(parms: ADMM_Params,
 
     # keep track of losses
     train_loss, train_acc = [], []
+    if validate: val_loss, val_acc = [], []
+
+    # initialize estimze 
+    y_hat = mnp.zeros_like(y)
 
     k = 0 
     while k < max_iter:
-
-        # ----------- METRIC COMPUTATIONS -----------------
-        y_hat = OPS.F_multop(u)
-        train_loss.append(loss_func(y_hat, y))
-        train_acc.append(acc_func(y_hat, y))
-        if verbose: print(f"iter = {k}, loss = {train_loss[-1]}, acc = {train_acc[-1]}")
 
         # ----------- PERFORM U UPDATE -----------------
         start = perf_counter()
@@ -207,18 +226,45 @@ def admm_optimizer(parms: ADMM_Params,
         nu += (Gu - s) * parms.gamma_ratio
         time_dual += perf_counter() - start
 
+        # ----------- METRIC COMPUTATIONS -----------------
+        y_hat = OPS.F_multop(u)
+        train_loss.append(loss_func(y_hat, y))
+        train_acc.append(acc_func(y_hat, y))
+        if validate:
+
+            u_transform, alpha_transform = optimal_weights_transform(v[0], v[1], P_S, d, verbose=verbose)
+            if len(alpha_transform) > 0:
+                y_hat_val = mnp.relu(X_val @ u_transform) @ alpha_transform
+                # loss and accuracy calculation
+                val_loss.append(loss_func(y_hat_val, y_val))
+                val_acc.append(acc_func(y_hat_val, y_val))
+            # handle case where no weights are non-zero
+            else:
+                val_loss.append(mnp.inf(parms.datatype_backend))
+                val_acc.append(0)
+
+            if verbose: print(f"iter = {k}, tr_loss = {train_loss[-1]}, tr_acc = {train_acc[-1]}, val_acc = {val_acc[-1]}")
+        elif verbose: print(f"iter = {k}, loss = {train_loss[-1]}, acc = {train_acc[-1]}")
+
+
         # iter step 
         k += 1        
-
-    # Optimal Weights v1...vP_S w1...wP_S of C-ReLU Problem
-    v = tensor_to_vec(v)
-    opt_weights = mnp.reshape(v, (P_S*2, d))
-    v = opt_weights[:P_S]
-    w = opt_weights[P_S:P_S*2]
 
     # collect metrics (just keep as numpy arrays by default)
     solver_metrics["train_loss"] = mnp.array(train_loss)
     solver_metrics["train_acc"] = mnp.array(train_acc)
+
+    solver_metrics["solve_time_breakdown"] = dict(
+        time_precomp=time_precomp,
+        time_u=time_u,
+        time_v=time_v,
+        time_s=time_s,
+        time_dual=time_dual,
+    )
+
+    if validate:
+        solver_metrics["val_loss"] = mnp.array(val_loss)
+        solver_metrics["val_acc"] = mnp.array(val_acc)
 
     # Show times
     if verbose:
@@ -233,7 +279,8 @@ def admm_optimizer(parms: ADMM_Params,
         \n\tTotal S updates:    {time_s:.4f}s\
         \n\tTotal Dual updates: {time_dual:.4f}s""")
 
-    return v, w, solver_metrics
+    # Optimal Weights v1...vP_S w1...wP_S of C-ReLU Problem
+    return v[0], v[1], solver_metrics
 
 
 ## FOR CHECKING THAT OPTIMIZERS ARE IMPLEMENTED 

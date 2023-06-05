@@ -12,7 +12,7 @@ from typing import Union, Sequence, Tuple
 import scipy.linalg as scipy_LA 
 import jax.scipy.linalg as jax_LA
 
-from utils.typing_utils import ArrayType, ScalarTypes, get_backend_type, convert_backend_type, DATATYPE_BACKENDS
+from utils.typing_utils import ArrayType, ScalarTypes, get_backend_type, convert_backend_type, DATATYPE_BACKENDS, TORCH_DTYPE, NP_DTYPE, JAX_DTYPE
 
 def get_device(backend_type: str):
     """
@@ -20,7 +20,8 @@ def get_device(backend_type: str):
     TODO: jax backend setup
     """
     if backend_type == "jax":
-        raise NotImplementedError("@MIRIA: for you to set up jax device in backend.")
+        print("WARNING: JAX only set up on CPU. @MIRIA: for you to set up jax device in backend.")
+        return "cpu"
     elif backend_type == "torch":
         return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     else: # else numpy
@@ -89,6 +90,99 @@ def maximum(x1: Union[ArrayType, float, int],
     else: # else numpy
         return np.maximum(x1, x2)
 
+def min(x: Union[ArrayType, float, int], 
+        axis=None) -> Union[ArrayType, float, int]:
+    """
+    Get minimum of an array along an axis.
+
+    Parameters
+    ----------
+    x : ArrayType | scalar
+        The data over which the minimum value desired to be found.
+
+    Returns
+    -------
+    y : ArrayType | scalar
+        Minimum values along axis
+    """
+
+    # handle case of scalar input x1 and/or x2
+    if type(x) not in ScalarTypes:
+        backend_type = get_backend_type(x)
+    else: # else input was 2 scalars
+        return x
+
+    if backend_type == "jax":
+        return jnp.min(x, axis=axis)
+    elif backend_type == "torch":
+        if axis is not None:
+            return torch.min(x, dim=axis)
+        else:
+            return torch.min(x)
+    else: # else numpy
+        return np.min(x, axis=axis)
+
+def max(x: Union[ArrayType, float, int], 
+        axis=None) -> Union[ArrayType, float, int]:
+    """
+    Get maximum of an array along an axis.
+
+    Parameters
+    ----------
+    x : ArrayType | scalar
+        The data over which the maximum value desired to be found.
+
+    Returns
+    -------
+    y : ArrayType | scalar
+        Maximum values along axis
+    """
+
+    # handle case of scalar input x1 and/or x2
+    if type(x) not in ScalarTypes:
+        backend_type = get_backend_type(x)
+    else: # else input was 2 scalars
+        return x
+
+    if backend_type == "jax":
+        return jnp.max(x, axis=axis)
+    elif backend_type == "torch":
+        if axis is not None:
+            return torch.max(x, dim=axis)
+        else:
+            return torch.max(x)
+    else: # else numpy
+        return np.max(x, axis=axis)
+    
+def abs(x: Union[ArrayType, float, int], 
+        axis=None) -> Union[ArrayType, float, int]:
+    """
+    Get scalar-wise absolute value of array.
+
+    Parameters
+    ----------
+    x : ArrayType | scalar
+        The data over which the absolute value desired to be found.
+
+    Returns
+    -------
+    y : ArrayType | scalar
+        absolute values
+    """
+
+    # handle case of scalar input x1 and/or x2
+    if type(x) not in ScalarTypes:
+        backend_type = get_backend_type(x)
+    else: # else input was 2 scalars
+        return np.abs(x)
+
+    if backend_type == "jax":
+        return jnp.abs(x)
+    elif backend_type == "torch":
+        return torch.abs(x)
+    else: # else numpy
+        return np.abs(x)
+      
 def norm(x: ArrayType,
          ord: Union[int, str] = None, 
          axis: int = None,
@@ -143,12 +237,12 @@ def sqrt(x: Union[float, ArrayType]) -> Union[float, ArrayType]:
     """
     
     backend_type = get_backend_type(x)
-
+    
     if backend_type == "jax":
         return jnp.sqrt(x)
     elif backend_type == "torch":
         return torch.sqrt(x)
-    else: # else numpy
+    else: # else numpy or scalar
         return np.sqrt(x)
         
 def log(x: Union[float, ArrayType]) -> Union[float, ArrayType]:
@@ -308,6 +402,35 @@ def round(x: ArrayType,
     else: # numpy
         return np.around(x, decimals=decimals)
 
+def inf(backend_type: str = "numpy"):
+    """
+    Given string backend_type, get the positive infinity value
+    """
+
+    assert backend_type in DATATYPE_BACKENDS, f"Input backend type {backend_type} incorrect; must be one of {DATATYPE_BACKENDS}"
+
+    if backend_type == "jax":
+        return jnp.inf
+    elif backend_type == "torch":
+        return torch.inf
+    else:
+        return np.inf
+
+def spacing(x: ScalarTypes, 
+            backend_type: str = "numpy"):
+    """
+    Get distance to next largest number
+    """
+
+    if backend_type == "jax":
+        return jnp.spacing(x)
+    elif backend_type == "torch":
+        dev = x.device
+        x = x.cpu().numpy()
+        return torch.Tensor(np.spacing(x)).to(TORCH_DTYPE).to(dev)
+    else:
+        return np.spacing(x)
+
 ########## MAKE ARRAYS ############################
 
 def array(object: list,
@@ -339,11 +462,11 @@ def array(object: list,
     assert dtype in [None, int, float], f"Datatype must be generic. Recieved {dtype} but expected either {int} or {float}."
     
     if backend_type == "jax":
-        return jnp.array(object, dtype=dtype)
+        return jnp.array(object, dtype=JAX_DTYPE)
     elif backend_type == "torch":
-        return torch.tensor(object, dtype=dtype, device=device)
+        return torch.tensor(object, dtype=TORCH_DTYPE, device=device)
     else: # else numpy
-        return np.array(object, dtype=dtype)
+        return np.array(object, dtype=NP_DTYPE)
 
 def zeros(shape: Union[int, Tuple[int]],
           backend_type: str,
@@ -373,7 +496,7 @@ def zeros(shape: Union[int, Tuple[int]],
     if backend_type == "jax":
         return jnp.zeros(shape, dtype=dtype)
     elif backend_type == "torch":
-        return torch.zeros(shape, dtype=dtype)
+        return torch.zeros(shape, dtype=TORCH_DTYPE)
     else: # else numpy
         return np.zeros(shape, dtype=dtype)
 
@@ -403,11 +526,11 @@ def ones(shape: Union[int, Tuple[int]],
     assert dtype in [int, float], f"Datatype must be generic. Recieved {dtype} but expected either {int} or {float}."
     
     if backend_type == "jax":
-        return jnp.ones(shape, dtype=dtype)
+        return jnp.ones(shape, dtype=JAX_DTYPE)
     elif backend_type == "torch":
-        return torch.ones(shape, dtype=dtype)
+        return torch.ones(shape, dtype=TORCH_DTYPE)
     else: # else numpy
-        return np.ones(shape, dtype=dtype)
+        return np.ones(shape, dtype=NP_DTYPE)
 
 def zeros_like(x: ArrayType) -> ArrayType: 
 
@@ -428,11 +551,11 @@ def zeros_like(x: ArrayType) -> ArrayType:
     backend_type = get_backend_type(x)
 
     if backend_type == "jax":
-        return jnp.zeros_like(x)
+        return jnp.zeros_like(x, dtype=JAX_DTYPE)
     elif backend_type == "torch":
-        return torch.zeros_like(x)
+        return torch.zeros_like(x, dtype=TORCH_DTYPE)
     else: # else numpy
-        return np.zeros_like(x)
+        return np.zeros_like(x, dtype=NP_DTYPE)
     
 def ones_like(x: ArrayType) -> ArrayType: 
 
@@ -453,11 +576,11 @@ def ones_like(x: ArrayType) -> ArrayType:
     backend_type = get_backend_type(x)
 
     if backend_type == "jax":
-        return jnp.ones_like(x)
+        return jnp.ones_like(x, dtype=JAX_DTYPE)
     elif backend_type == "torch":
-        return torch.ones_like(x)
+        return torch.ones_like(x, dtype=TORCH_DTYPE)
     else: # else numpy
-        return np.ones_like(x)
+        return np.ones_like(x, dtype=NP_DTYPE)
 
 def arange(start: Union[int,float],
            stop: Union[int,float],
@@ -523,15 +646,17 @@ def eye(N: int,
     assert backend_type in DATATYPE_BACKENDS, f"Input backend type {backend_type} incorrect; must be one of {DATATYPE_BACKENDS}"
     
     if backend_type == "jax":
-        return jnp.eye(N, M=M, dtype=dtype)
+        return jnp.eye(N, M=M, dtype=JAX_DTYPE)
     elif backend_type == "torch":
-        return torch.eye(N, m=M, dtype=dtype, device=device)
+        if M is not None:
+            return torch.eye(n=N, m=M, dtype=TORCH_DTYPE, device=device)
+        else:
+            return torch.eye(n=N, dtype=TORCH_DTYPE, device=device)
     else: # else numpy
         if dtype is None: dtype = float
-        return np.eye(N, M=M, dtype=dtype)
+        return np.eye(N, M=M, dtype=NP_DTYPE)
 
-def diag(diags: ArrayType,
-        backend_type: str = "numpy") -> ArrayType: 
+def diag(diags: ArrayType) -> ArrayType: 
 
     """
     Return a 2-D matrix with given diagonal entries
@@ -540,23 +665,46 @@ def diag(diags: ArrayType,
     ----------
     diags : ArrayType
       Diagonal entries
-      Data-type of the returned array. Must be either int or float.
 
     Returns
     -------
     D : ArrayType 
       Square diagonal matrix with diags as the diagonal entries
     """
-    
-    assert backend_type in DATATYPE_BACKENDS, f"Input backend type {backend_type} incorrect; must be one of {DATATYPE_BACKENDS}"
-    
+
+    backend_type = get_backend_type(diags)
+        
     if backend_type == "jax":
         return jnp.diag(diags)
     elif backend_type == "torch":
         return torch.diag(diags)
     else: # else numpy
-        if dtype is None: dtype = float
         return np.diag(diags)
+
+def diagonal(X: ArrayType) -> ArrayType: 
+
+    """
+    Return a 1-D matrix which is the diagonal of matrix X
+
+    Parameters
+    ----------
+    X : ArrayType
+        2-D matrix
+
+    Returns
+    -------
+    diags : ArrayType 
+        1-D diagonals of X
+    """
+    
+    backend_type = get_backend_type(X)
+    
+    if backend_type == "jax":
+        return jnp.diagonal(X)
+    elif backend_type == "torch":
+        return torch.diagonal(X)
+    else: # else numpy
+        return np.diagonal(X)
 
 
 ########## MODIFY ARRAYS #########################
@@ -594,7 +742,10 @@ def append(arr: ArrayType,
     if backend_type == "jax":
         return jnp.append(arr, values, axis=axis)
     elif backend_type == "torch":
-        return torch.cat((arr, values), dim=axis)
+        if axis is not None:
+            return torch.cat((arr, values), dim=axis)
+        else:
+            return torch.cat((arr, values))
     else: # else numpy
         return np.append(arr, values, axis=axis)
 
@@ -692,6 +843,30 @@ def reshape(arr: ArrayType,
     else: # else numpy
         return np.reshape(arr, newshape)
 
+def copy(x: ArrayType) -> ArrayType:
+    """
+    Return a copied version of array x
+
+    Parameters
+    ----------
+    x : ArrayType
+        Array to be copied.
+
+    Returns
+    -------
+    y : ArrayType
+        Copied array.
+    """
+    backend_type = get_backend_type(x)
+
+    if backend_type == "jax":
+        return jnp.copy(x)
+    elif backend_type == "torch":
+        devce = x.device
+        return x.detach().clone().to(devce)
+    else:
+        return np.copy(x)
+
 
 ########## RANDOM OPS #############################
 
@@ -785,11 +960,11 @@ def randn(size: Sequence[int],
 
     if backend_type == "jax":
         y = np.random.randn(*size)
-        return convert_backend_type(y, target_backend="jax")
+        return convert_backend_type(y, target_backend="jax").astype(JAX_DTYPE)
     elif backend_type == "torch":
-        return torch.randn(*size)
+        return torch.randn(*size, dtype=TORCH_DTYPE)
     else: # else numpy
-        return np.random.randn(*size)
+        return np.random.randn(*size).astype(NP_DTYPE)
     
 def rand(size: Sequence[int],
           backend_type: str) -> ArrayType:
@@ -814,11 +989,11 @@ def rand(size: Sequence[int],
 
     if backend_type == "jax":
         y = np.random.rand(*size)
-        return convert_backend_type(y, target_backend="jax")
+        return convert_backend_type(y, target_backend="jax").astype(JAX_DTYPE)
     elif backend_type == "torch":
-        return torch.rand(*size)
+        return torch.rand(*size, dtype=TORCH_DTYPE)
     else: # else numpy
-        return np.random.rand(*size)
+        return np.random.rand(*size).astype(NP_DTYPE)
 
 def random_choice(a: Union[ArrayType, int],
                   size: Union[int, Tuple[int]] = None,
@@ -860,7 +1035,7 @@ def random_choice(a: Union[ArrayType, int],
     
     # if jax, then convert to jax indices
     if backend_type == "jax":
-        return convert_backend_type(i, "jax")
+        return convert_backend_type(i, "jax").astype(int)
     # numpy and torch both use np array indexing
     else:
         return i
@@ -935,7 +1110,8 @@ def dot(a: ArrayType,
 
 def solve_triangular(a: ArrayType,
                      b: ArrayType,
-                     lower: bool = False) -> ArrayType:
+                     lower: bool = False,
+                     check_finite: bool = True) -> ArrayType:
     """
     Solve the equation `a x = b` for `x`, assuming a is a triangular matrix.
 
@@ -958,11 +1134,14 @@ def solve_triangular(a: ArrayType,
     backend_type = get_backend_type(a)
     
     if backend_type == "jax":
-        return jax_LA.solve_triangular(a, b, lower=lower)
+        return jax_LA.solve_triangular(a, b, lower=lower, check_finite=check_finite)
     elif backend_type == "torch":
-        return torch.linalg.solve_triangular(a, b, upper = not lower)
+        if len(b.shape) == 1:
+            return torch.linalg.solve_triangular(a, b[:,None], upper = not lower).reshape(-1)
+        else:
+            return torch.linalg.solve_triangular(a, b, upper = not lower)
     else: # numpy
-        return scipy_LA.solve_triangular(a, b, lower=lower)
+        return scipy_LA.solve_triangular(a, b, lower=lower, check_finite=check_finite)
 
 def inverse(A: ArrayType) -> ArrayType:
     """
@@ -1010,13 +1189,14 @@ def svd(A: ArrayType) -> ArrayType:
     backend_type = get_backend_type(A)
     
     if backend_type == "jax":
-        return jnp.linalg.svd(A, full_matrices=False)
+        return jax_LA.svd(A, full_matrices=False, check_finite=False)
     elif backend_type == "torch":
         return torch.svd(A)
     else: # numpy
-        return np.linalg.svd(A, full_matrices=False)
+        return scipy_LA.svd(A, full_matrices=False, check_finite=False)
 
 def qr(A: ArrayType) -> ArrayType:
+
     """
     Computes the QR deomposition of A
 
@@ -1036,8 +1216,42 @@ def qr(A: ArrayType) -> ArrayType:
     backend_type = get_backend_type(A)
     
     if backend_type == "jax":
-        return jnp.linalg.qr(A)
+        return jax_LA.qr(A, mode='economic')
     elif backend_type == "torch":
-        return torch.qr(A)
+        return torch.linalg.qr(A, mode='reduced')
     else: # numpy
-        return np.linalg.qr(A)
+        return scipy_LA.qr(A, mode='economic')
+    
+def eigh(A: ArrayType,
+         eigvals_only: bool = False) -> Union[Tuple[ArrayType,ArrayType],ArrayType]:
+
+    """
+    Get eigenvalues (and optionally also eigenvalues) of matrix
+
+    Parameters
+    ----------
+    A : ArrayType
+        Square Matrix
+    eigvals_only : bool, default = False
+        True to also return eigenvectors
+
+    Returns
+    -------
+    w : (N,) ArrayType
+        eigenvalues
+    v : (M,N)
+        eigenvectors (if eigvals_only == False)
+    """
+
+    backend_type = get_backend_type(A)
+    
+    if backend_type == "jax":
+        return jax_LA.eigh(A, eigvals_only=eigvals_only)
+    elif backend_type == "torch":
+        if eigvals_only:
+            return torch.linalg.eigvalsh(A)
+        else:
+            return torch.linalg.eigh(A)
+    else: # numpy
+        return scipy_LA.eigh(A, eigvals_only=eigvals_only)
+    

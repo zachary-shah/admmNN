@@ -71,7 +71,6 @@ def load_mnist(dataset_rel_path=join('Convex-NN-Journal', 'Datasets', 'mnist.pkl
 
     return training_X, training_y.astype(int), test_X, test_y.astype(int)
 
-
 # Fashion MNIST 
 def load_fmnist(dataset_rel_path=join('Convex-NN-Journal', 'Datasets', 'Fashion MNIST'), 
                 n=3000, 
@@ -132,7 +131,6 @@ def load_fmnist(dataset_rel_path=join('Convex-NN-Journal', 'Datasets', 'Fashion 
         training_X = (training_X - X_mean) / (X_std + 1e-10)
         test_X = (test_X - X_mean) / (X_std + 1e-10)
     return training_X, training_y.astype(int), test_X, test_y.astype(int)
-
 
 # The CIFAR-10 
 def load_cifar(dataset_rel_path = join('Convex-NN-Journal', 'Datasets', 'cifar-10-batches-py'), 

@@ -5,3 +5,5 @@ baadam/
 weights/
 results/
 Datasets/
+*.pyc
+.DS_Store
