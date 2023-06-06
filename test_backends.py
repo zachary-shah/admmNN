@@ -18,7 +18,7 @@ from utils.load_data import load_mnist
 """################ PARAMETERS FOR DATA GENERATION ###################"""
 # ----------- Data parameters ------------
 dataset_path = "baADMM/datasets/mnist.pkl.gz"
-n_mnist = 1000 # fixed number of training examples to use
+n_mnist = 10000 # fixed number of training examples to use
 downsample = True # downsample data dim to 100 if True
 standardize_data = False # standardize X to zero-mean unit-variance before optimizing
 
@@ -28,7 +28,7 @@ P_S =  20 # number of sampled hyperplanes
 backends = ["torch"] # provide a list of backends to try (or just one in list format)
 loss_type = 'mse' #either 'mse' or 'ce'
 ntrials = 5 # number of trials for each experiment (to average over)
-max_iter = 10 # max number of outer optimization iterations
+max_iter = 30 # max number of outer optimization iterations
 accuracy_func = binary_classifcation_accuracy
 bias = True # add bias term to weights
 verbose_training = True
@@ -36,7 +36,7 @@ seed = None
 
 # ----------- Decide which optimizer methods to generate (at least one below must be "True") -----------
 admm_runner = True # to run vanilla admm on selected backends
-rbcd_runner = False # to run RBCD on selected backends (TODO: fix RBCD, this is currently not working)
+rbcd_runner = True # to run RBCD on selected backends 
 cg_runner = True # to run ADMM with standard conjugate gradient on selected backends
 pcg_runner = True # to run ADMM with diagonal (jacobi) preconditioned conjugate gradient on selected backends
 nysadmm_runner = True # to run ADMM with nystrom preconditioned conjugate gradient on selected backends
@@ -170,22 +170,6 @@ if rbcd_runner:
     optimizer_configs += rbcd_optimizer_configs
     optimizer_labs += rbcd_optimizer_labs
 
-# ------------ Train ADMM, get transformed weights too ----------
-def run_admm(X_train, y_train, X_test, y_test, params, max_iter):
-    # using approximate admm solver
-    solver = CReLU_MLP(X_train, y_train, **params)
-
-    metrics = solver.optimize(max_iter=max_iter, verbose=verbose_training, X_val=X_test, y_val=y_test)
-
-    metrics = solver.get_training_metrics()
-
-    # y_hat_train = solver.predict(X_train)
-    # y_hat_test = solver.predict(X_test)
-    # train_loss = squared_loss(y_hat_train, y_train)
-    # train_acc = binary_classifcation_accuracy(y_hat_train, y_train)
-    # test_acc = binary_classifcation_accuracy(y_hat_test, y_test)
-
-    return metrics
 
 # ------------ PLOT RESULT FOR SOLVER ----------
 def plot_metric(metric, 
@@ -217,14 +201,8 @@ def plot_metric(metric,
 # ------------ Load Data ------------
 print(f'Loading data...')
 # Load mnist and select only digts 2 and 8, but only get 1000 samples
-X_train, y_train, X_test, y_test = load_mnist(dataset_rel_path=dataset_path, n=-1, downsample=downsample)
-yy_train, yy_test = ((y_train+1)//2).astype(int), ((y_test+1)//2).astype(int)
-# get subset of train data
-X_tr = X_train[:n_mnist, :]
-y_tr = y_train[:n_mnist]
-yy_tr = yy_train[:n_mnist]
+X_train, y_train, X_test, y_test = load_mnist(dataset_rel_path=dataset_path, n=n_mnist, downsample=downsample)
 
-# values of n to try
 nopt = len(optimizer_configs)
 train_loss = np.zeros((nopt, ntrials, max_iter)) * np.nan
 train_acc = np.zeros((nopt, ntrials, max_iter)) * np.nan
@@ -238,12 +216,10 @@ solve_time = np.zeros((nopt, ntrials, len(solve_time_labels))) * np.nan
 for (k, optimizer_config) in enumerate(optimizer_configs):
     for t in range(ntrials):
         print(f"{optimizer_labs[k]} trial {t+1}/{ntrials}")
+        
+        solver = CReLU_MLP(X_train, y_train, **optimizer_config)
 
-        # [0, 1] labels for ADMM-RBCD only
-        if optimizer_config["optimizer_mode"] == "ADMM-RBCD":
-            metrics = run_admm(X_tr, yy_tr, X_test, yy_test, optimizer_config, max_iter)
-        else:
-            metrics = run_admm(X_tr, y_tr, X_test, y_test, optimizer_config, max_iter)
+        metrics = solver.optimize(max_iter=max_iter, verbose=verbose_training, X_val=X_test, y_val=y_test)
 
         train_loss[k, t] = metrics["train_loss"]
         train_acc[k, t] = metrics["train_acc"]

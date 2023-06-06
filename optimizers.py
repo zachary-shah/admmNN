@@ -141,7 +141,6 @@ def admm_optimizer(parms: ADMM_Params,
     if verbose: print("  Completing precomputations...")
 
     if parms.mode == "ADMM":
-
         # do precomputations in initialization of the linear system
         ls = Linear_Sys(OPS=OPS, 
                         params=parms,
@@ -153,7 +152,7 @@ def admm_optimizer(parms: ADMM_Params,
         # compute Xi.T @ X only for this 
         GiTGi = X.T @ X
         y = y.squeeze()
-
+        
     else:
         raise NotImplementedError("Unexpected mode for ADMM optimization.")
     
@@ -171,9 +170,6 @@ def admm_optimizer(parms: ADMM_Params,
     train_loss, train_acc = [], []
     if validate: val_loss, val_acc = [], []
 
-    # initialize estimze 
-    y_hat = mnp.zeros_like(y)
-
     k = 0 
     while k < max_iter:
 
@@ -186,7 +182,7 @@ def admm_optimizer(parms: ADMM_Params,
             u = ls.solve(b)
         # rbcd steps
         elif parms.mode == "ADMM-RBCD":
-            parms, u = RBCD_update(parms, OPS, y, y_hat, u, v, s, nu, lam, GiTGi, loss_func, verbose=verbose)
+            parms, u = RBCD_update(parms, OPS, y, u, v, s, nu, lam, GiTGi, loss_func, verbose=verbose)
             # parameter updates
             parms.RBCD_thresh *= parms.RBCD_thresh_decay
             parms.gamma_ratio *= parms.gamma_ratio_decay
@@ -197,21 +193,15 @@ def admm_optimizer(parms: ADMM_Params,
         # ----------- OTHER PARAMETER UPDATES -----------------
         # upates on v = (v1...vP, w1...wP) via prox operator
         start = perf_counter()
-        if parms.mode == "ADMM":
-            v = mnp.relu(1 - parms.beta / (parms.rho * mnp.norm(u + lam, axis=1)[:, None, :])) * (u + lam)
+        if parms.datatype_backend == "jax":
+            # v update
+            v = v.at[0].set(proxl2(u[0] + lam[0], beta=parms.beta, gamma=1 / parms.rho))
+            # w update
+            v = v.at[1].set(proxl2(u[1] + lam[1], beta=parms.beta, gamma=1 / parms.rho))
         else:
-            # handle assignment for immutable arrays
-            if parms.datatype_backend == "jax":
-                # v update
-                v = v.at[0].set(proxl2(u[0] + lam[0], beta=parms.beta, gamma=1 / parms.rho))
-                # w update
-                v = v.at[1].set(proxl2(u[1] + lam[1], beta=parms.beta, gamma=1 / parms.rho))
-            else:
-                # v update
-                v[0] = proxl2(u[0] + lam[0], beta=parms.beta, gamma=1 / parms.rho)
-                # w update
-                v[1] = proxl2(u[1] + lam[1], beta=parms.beta, gamma=1 / parms.rho)
-
+            # v, w update
+            v[0] = proxl2(u[0] + lam[0], beta=parms.beta, gamma=1 / parms.rho)
+            v[1] = proxl2(u[1] + lam[1], beta=parms.beta, gamma=1 / parms.rho)
         time_v += perf_counter() - start
 
         # updates on s = (s1...sP, t1...tP)
@@ -231,7 +221,6 @@ def admm_optimizer(parms: ADMM_Params,
         train_loss.append(loss_func(y_hat, y))
         train_acc.append(acc_func(y_hat, y))
         if validate:
-
             u_transform, alpha_transform = optimal_weights_transform(v[0], v[1], P_S, d, verbose=verbose)
             if len(alpha_transform) > 0:
                 y_hat_val = mnp.relu(X_val @ u_transform) @ alpha_transform
@@ -245,7 +234,6 @@ def admm_optimizer(parms: ADMM_Params,
 
             if verbose: print(f"iter = {k}, tr_loss = {train_loss[-1]}, tr_acc = {train_acc[-1]}, val_acc = {val_acc[-1]}")
         elif verbose: print(f"iter = {k}, loss = {train_loss[-1]}, acc = {train_acc[-1]}")
-
 
         # iter step 
         k += 1        
@@ -270,8 +258,8 @@ def admm_optimizer(parms: ADMM_Params,
     if verbose:
         print(f"""\nOptimization complete!\
         \nMetrics summary:\
-        \n\tFinal loss: {train_loss[-1]}\
-        \n\tFinal accuracy: {train_acc[-1]}\
+        \n\tFinal train loss: {train_loss[-1]}\
+        \n\tFinal train accuracy: {train_acc[-1]}\
         \nComputation times summary:\
         \n\tPrecomputations:    {time_precomp:.4f}s\
         \n\tTotal U updates:    {time_u:.4f}s\

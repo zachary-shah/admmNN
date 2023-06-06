@@ -18,10 +18,10 @@ torch.manual_seed(my_seed)
 np.random.seed(my_seed)
 
 # Helper functions
-from utils import *
-from load_data import load_mnist, load_fmnist, load_cifar
-from postprocess import *
-from ADMM_torch import ADMMTrainer
+from rbcd.utils import *
+from utils.load_data import load_mnist, load_fmnist, load_cifar
+from rbcd.postprocess import *
+from rbcd.ADMM_torch import ADMMTrainer
 
 """## MNIST
 
@@ -86,4 +86,3 @@ print('Median training accuracy:', np.median(accuracy_train),
       ', Median loss:', np.median(cost))
 print('Std div accuracy:', np.std(accuracy_train), ', Std div loss:', np.std(cost)  )
 print("Average time:", (perf_counter() - t2) / runs, 'seconds.')
-

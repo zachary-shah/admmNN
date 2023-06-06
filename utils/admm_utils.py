@@ -197,6 +197,7 @@ class FG_Operators():
         self.n = n
         self.d = d
         self.d_diags = d_diags
+        self.e_diags = 2 * d_diags - 1
         self.X = X
         self.rho = rho
         self.mem_save = mem_save
@@ -211,8 +212,8 @@ class FG_Operators():
     
     # get matrix G_i
     def G(self, i):
-        return (2 * self.d_diags[:, i, None] - 1) * self.X
-    
+        return self.e_diags[:,i,None] * self.X
+        
     # replace linop F * vec
     def F_multop(self, vec, transpose=False):
 
@@ -261,10 +262,10 @@ class FG_Operators():
         else:
             # @Daniel's implimentation
             if transpose:
-                diags_to_vec = (2 * self.d_diags[None, ...] - 1) * vec
+                diags_to_vec = self.e_diags[None, ...] * vec
                 out = mnp.sum(diags_to_vec[:, :, None, :] * self.X[..., None], axis=1)
             else:
-                out = (self.X @ vec) * (2 * self.d_diags[None, ...] - 1)
+                out = (self.X @ vec) * self.e_diags[None, ...]
 
         return out
     

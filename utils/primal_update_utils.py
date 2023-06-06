@@ -12,7 +12,6 @@ import utils.math_utils as mnp
 def RBCD_update(parms: ADMM_Params, 
                 OPS: FG_Operators, 
                 y: ArrayType, 
-                y_hat: ArrayType, 
                 u: ArrayType, 
                 v: ArrayType, 
                 s: ArrayType, 
@@ -25,31 +24,29 @@ def RBCD_update(parms: ADMM_Params,
     Performs RBCD updates step for ADMM-RBCD descent
     """
 
-    if verbose: print(f"  Beginning RBCD update...\n\tloss = {parms.loss_type}, \n\tloss_func = {loss_func}")
+    if verbose: print(f"  Beginning RBCD update...\n\tloss = {parms.loss_type}")
 
-    emat = 2 * OPS.d_diags - 1
-    dmat = OPS.d_diags
+    u_out = mnp.zeros_like(u)
 
-    u_orig = mnp.copy(u)
-    v_orig = mnp.copy(v)
-    s_orig = mnp.copy(s)
-    lam_orig = mnp.copy(lam)
-    nu_orig = mnp.copy(nu)
+    # initial estimate
+    y_hat = OPS.F_multop(u)
 
-    u, z = u_orig[0], u_orig[1]
-    v, w = v_orig[0], v_orig[1]
-    s, t = s_orig[0], s_orig[1]
-    lam1, lam2 = lam_orig[0], lam_orig[1]
-    nu1, nu2 = nu_orig[0], nu_orig[1]
-    
-    # Initialize objective
-    stil = OPS.X.T @ (emat * (s - nu1))
-    ttil = OPS.X.T @ (emat * (t - nu2))
-    y_hat = mnp.sum(dmat * (OPS.X @ (u - z)), axis=1) 
+    # precomputation 
+    stil = OPS.G_multop(s - nu, transpose=True)
+
+    # unpack variable pairs
+    u, z = u[0], u[1]
+    v, w = v[0], v[1]
+    s, t = s[0], s[1]
+    lam1, lam2 = lam[0], lam[1]
+    nu1, nu2 = nu[0], nu[1]
+    stil, ttil = stil[0], stil[1]
 
     dcosts = mnp.ones(ceil(parms.base_buffer_size * mnp.sqrt(parms.P_S / parms.RBCD_blocksize)), backend_type=parms.datatype_backend) * 1e8
     ptr, k = 0, 0  # k is current count of iterations
-    max_iter = 2000 #temporary max iteration for debugging; TODO: remove or parameterize
+    
+    max_iter = 1000 #temporary max iteration for debugging; TODO: remove or parameterize
+    
     while mnp.mean(dcosts) > parms.RBCD_thresh and k < max_iter:
         k += 1
         i = mnp.random_choice(parms.P_S, size=parms.RBCD_blocksize, replace=False, backend_type=parms.datatype_backend)
@@ -62,10 +59,8 @@ def RBCD_update(parms: ADMM_Params,
         elif parms.loss_type == 'ce':
             grad1 = OPS.X.T @ (OPS.d_diags[:, i] * (-2 * y + 2 / (1 + mnp.exp(-2 * y_hat)))[:,None])
 
-        grad2u = u[:, i] - v[:, i] + lam1[:, i] + GiTGi @ u[:, i] - stil[:, i]
-        grad2z = z[:, i] - w[:, i] + lam2[:, i] + GiTGi @ z[:, i] - ttil[:, i]
-        gradu = grad1 + parms.rho * grad2u
-        gradz = -grad1 + parms.rho * grad2z
+        gradu = grad1 + parms.rho * (u[:, i] - v[:, i] + lam1[:, i] + GiTGi @ u[:, i] - stil[:, i])
+        gradz = -grad1 + parms.rho * (z[:, i] - w[:, i] + lam2[:, i] + GiTGi @ z[:, i] - ttil[:, i])
 
         # ----------- Determine the step size using line search -----------------
         alpha = parms.alpha0
@@ -74,7 +69,7 @@ def RBCD_update(parms: ADMM_Params,
             dz = -alpha * gradz
 
             # Current prediction (via convex formulation)
-            yhat_new = y_hat + mnp.sum(dmat[:, i] * (OPS.X @ (du - dz)), axis=1)
+            yhat_new = y_hat + mnp.sum(OPS.d_diags[:, i] * (OPS.X @ (du - dz)), axis=1)
 
             dloss = loss_func(yhat_new, y) - loss1
 
@@ -82,18 +77,21 @@ def RBCD_update(parms: ADMM_Params,
                      mnp.sum((z[:, i] + dz - w[:, i] + lam2[:, i]) ** 2) - \
                      mnp.sum((u[:, i] - v[:, i] + lam1[:, i]) ** 2) + \
                      mnp.sum((z[:, i] - w[:, i] + lam2[:, i]) ** 2)
-            ddist2 = mnp.sum((emat[:, i] * (OPS.X @ (u[:, i] + du)) - s[:, i] + nu1[:, i]) ** 2) + \
-                     mnp.sum((emat[:, i] * (OPS.X @ (z[:, i] + dz)) - t[:, i] + nu2[:, i]) ** 2) - \
-                     mnp.sum((emat[:, i] * (OPS.X @ u[:, i]) - s[:, i] + nu1[:, i]) ** 2) - \
-                     mnp.sum((emat[:, i] * (OPS.X @ z[:, i]) - t[:, i] + nu2[:, i]) ** 2)
+            ddist2 = mnp.sum((OPS.e_diags[:, i] * (OPS.X @ (u[:, i] + du)) - s[:, i] + nu1[:, i]) ** 2) + \
+                     mnp.sum((OPS.e_diags[:, i] * (OPS.X @ (z[:, i] + dz)) - t[:, i] + nu2[:, i]) ** 2) - \
+                     mnp.sum((OPS.e_diags[:, i] * (OPS.X @ u[:, i]) - s[:, i] + nu1[:, i]) ** 2) - \
+                     mnp.sum((OPS.e_diags[:, i] * (OPS.X @ z[:, i]) - t[:, i] + nu2[:, i]) ** 2)
             dcost = dloss + (ddist1 + ddist2) * parms.rho / 2
 
             # Armijo's rule
             if alpha <= 1e-8 or dcost <= -1e-3 * mnp.sqrt(mnp.sum((du ** 2)) + mnp.sum((dz ** 2))):
                 break
             alpha /= 2.5
+
             # Decaying basic step size
             parms.alpha0 = mnp.maximum(1e-10, parms.alpha0 / 1.5)
+            
+        y_hat = yhat_new 
 
         # Update u, z, and objective
         if parms.datatype_backend == "jax":
@@ -112,8 +110,6 @@ def RBCD_update(parms: ADMM_Params,
             print('\tIteration', k, ', alpha:', alpha, ', delta:', mnp.mean(dcosts))
 
     # concatenate
-    u_out = mnp.zeros_like(u_orig)
-
     if parms.datatype_backend == "jax":
         u_out = u_out.at[0].set(u)
         u_out = u_out.at[1].set(z)
@@ -122,4 +118,3 @@ def RBCD_update(parms: ADMM_Params,
         u_out[1] = z
 
     return parms, u_out
-
