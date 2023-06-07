@@ -152,7 +152,7 @@ def admm_optimizer(parms: ADMM_Params,
         # compute Xi.T @ X only for this 
         GiTGi = X.T @ X
         y = y.squeeze()
-        
+
     else:
         raise NotImplementedError("Unexpected mode for ADMM optimization.")
     

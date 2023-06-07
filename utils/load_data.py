@@ -133,9 +133,10 @@ def load_fmnist(dataset_rel_path=join('Convex-NN-Journal', 'Datasets', 'Fashion 
     return training_X, training_y.astype(int), test_X, test_y.astype(int)
 
 # The CIFAR-10 
-def load_cifar(dataset_rel_path = join('Convex-NN-Journal', 'Datasets', 'cifar-10-batches-py'), 
+def load_cifar(dataset_rel_path = join('datasets', 'cifar-10-batches-py'), 
                n=10000, 
                downsample=False, 
+               binary_classes=True,
                stride=3, 
                normalize=True):
     
@@ -153,10 +154,11 @@ def load_cifar(dataset_rel_path = join('Convex-NN-Journal', 'Datasets', 'cifar-1
     # X_training_raw = X_training_raw.reshape(10000, 3, 32, 32)
     training_y = np.concatenate([np.array(dat_training['labels'])
                                  for dat_training in dats_training], axis=0)  # (50000,)
-
-    training_mask = (training_y == 2) | (training_y == 8)
-    X_training_raw = X_training_raw[training_mask, :]
-    training_y = np.sign(training_y[training_mask] - 5.)
+    
+    if binary_classes:
+        training_mask = (training_y == 0) | (training_y == 1)
+        X_training_raw = X_training_raw[training_mask, :]
+        training_y = np.sign(training_y[training_mask] - 0.5)
 
     if downsample:
         training_X = np.zeros([training_y.size, 3 * (dim ** 2)])
@@ -175,9 +177,11 @@ def load_cifar(dataset_rel_path = join('Convex-NN-Journal', 'Datasets', 'cifar-1
     X_test_raw = np.array(images)  # (10000, 3072)
     test_y = np.array(labels)  # (10000,)
 
-    test_mask = (test_y == 2) | (test_y == 8)
-    X_test_raw = X_test_raw[test_mask, :]
-    test_y = np.sign(test_y[test_mask] - 5.)
+    if binary_classes:
+        test_mask = (test_y == 0) | (test_y == 1)
+        X_test_raw = X_test_raw[test_mask, :]
+        test_y = np.sign(test_y[test_mask] - 0.5)
+        
     if downsample:
         test_X = np.zeros([test_y.size, 3 * (dim ** 2)])
         for i in range(test_y.size):
@@ -195,3 +199,4 @@ def load_cifar(dataset_rel_path = join('Convex-NN-Journal', 'Datasets', 'cifar-1
         training_X = (training_X - X_mean) / (X_std + 1e-10)
         test_X = (test_X - X_mean) / (X_std + 1e-10)
     return training_X, training_y, test_X, test_y
+

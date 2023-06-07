@@ -42,6 +42,7 @@ class CReLU_MLP():
                  standardize_data: bool = False,
                  acc_func: EvalFunction = classifcation_accuracy,
                  verbose_initialization: bool = False,
+                 device: str = "cpu",
                  **kwargs,
                  ):
         
@@ -81,7 +82,10 @@ class CReLU_MLP():
             if verbose_initialization: print(f"\tUsing backend: {self.datatype_backend}.")
         
          # acceleration setup
-        self.device = mnp.get_device(self.datatype_backend)
+        if device is None:
+            self.device = mnp.get_device(self.datatype_backend)
+        else:
+            self.device = device
 
         # put data on correct backend
         X = convert_backend_type(X, self.datatype_backend, device=self.device)

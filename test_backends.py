@@ -18,7 +18,7 @@ from utils.load_data import load_mnist
 """################ PARAMETERS FOR DATA GENERATION ###################"""
 # ----------- Data parameters ------------
 dataset_path = "baADMM/datasets/mnist.pkl.gz"
-n_mnist = 10000 # fixed number of training examples to use
+n_mnist = 100 # fixed number of training examples to use
 downsample = True # downsample data dim to 100 if True
 standardize_data = False # standardize X to zero-mean unit-variance before optimizing
 
@@ -28,18 +28,18 @@ P_S =  20 # number of sampled hyperplanes
 backends = ["torch"] # provide a list of backends to try (or just one in list format)
 loss_type = 'mse' #either 'mse' or 'ce'
 ntrials = 5 # number of trials for each experiment (to average over)
-max_iter = 5 # max number of outer optimization iterations
+max_iter = 10 # max number of outer optimization iterations
 accuracy_func = binary_classifcation_accuracy
 bias = True # add bias term to weights
 verbose_training = True
 seed = None
 
 # ----------- Decide which optimizer methods to generate (at least one below must be "True") -----------
-admm_runner = False # to run vanilla admm on selected backends
-rbcd_runner = False # to run RBCD on selected backends 
-cg_runner = False # to run ADMM with standard conjugate gradient on selected backends
-pcg_runner = False # to run ADMM with diagonal (jacobi) preconditioned conjugate gradient on selected backends
-nysadmm_runner = True # to run ADMM with nystrom preconditioned conjugate gradient on selected backends
+admm_runner = True # to run vanilla admm on selected backends
+rbcd_runner = True # to run RBCD on selected backends 
+cg_runner = True # to run ADMM with standard conjugate gradient on selected backends
+pcg_runner = True # to run ADMM with diagonal (jacobi) preconditioned conjugate gradient on selected backends
+nyspcg_runner = True # to run ADMM with nystrom preconditioned conjugate gradient on selected backends
 
 """#################################################################"""
 
@@ -110,7 +110,7 @@ admm_pcg_optimizer_labs = [f"ADMM-Jacobi-PCG-{backend} (cpu)" for backend in bac
 
 """########################### nysADMM ##############################"""
 # # ----------- ADMM solver params ------------
-nysadmm_base_config = dict(
+nyspcg_base_config = dict(
     optimizer_mode= "ADMM",
     loss_type = loss_type,
     standardize_data = standardize_data,
@@ -125,10 +125,10 @@ nysadmm_base_config = dict(
     cg_preconditioner='nystrom'
 )
 
-nysadmm_optimizer_configs = [nysadmm_base_config.copy() for k in range(len(backends))]
+nyspcg_optimizer_configs = [nyspcg_base_config.copy() for k in range(len(backends))]
 for (i, backend) in enumerate(backends):
-    nysadmm_optimizer_configs[i].update(datatype_backend = backend)
-nysadmm_optimizer_labs = [f"nysADMM-{backend} (cpu)" for backend in backends]
+    nyspcg_optimizer_configs[i].update(datatype_backend = backend)
+nyspcg_optimizer_labs = [f"nysADMM-{backend} (cpu)" for backend in backends]
 """#################################################################"""
 
 
@@ -153,7 +153,7 @@ rbcd_optimizer_labs = [f"ADMM-RBCD-{backend} (cpu)" for backend in backends]
 
 # ------------ Combine all optimizers desired ----------
 optimizer_configs, optimizer_labs = [], []
-assert admm_runner or pcg_runner or cg_runner or rbcd_runner or nysadmm_runner, "Must select at least one optimizer runner"
+assert admm_runner or pcg_runner or cg_runner or rbcd_runner or nyspcg_runner, "Must select at least one optimizer runner"
 if admm_runner:
     optimizer_configs += admm_optimizer_configs
     optimizer_labs += admm_optimizer_labs
@@ -163,9 +163,9 @@ if cg_runner:
 if pcg_runner:
     optimizer_configs += admm_pcg_optimizer_configs
     optimizer_labs += admm_pcg_optimizer_labs
-if nysadmm_runner:
-    optimizer_configs += nysadmm_optimizer_configs
-    optimizer_labs += nysadmm_optimizer_labs
+if nyspcg_runner:
+    optimizer_configs += nyspcg_optimizer_configs
+    optimizer_labs += nyspcg_optimizer_labs
 if rbcd_runner:
     optimizer_configs += rbcd_optimizer_configs
     optimizer_labs += rbcd_optimizer_labs
@@ -209,7 +209,7 @@ train_acc = np.zeros((nopt, ntrials, max_iter)) * np.nan
 test_loss = np.zeros((nopt, ntrials, max_iter)) * np.nan
 test_acc = np.zeros((nopt, ntrials, max_iter)) * np.nan
 
-solve_time_labels = ["precomps", "u comps", "v comps", "s comps", "dual comps"]
+solve_time_labels = ["precomps", "u update", "v update", "s update", "dual update"]
 solve_time = np.zeros((nopt, ntrials, len(solve_time_labels))) * np.nan
 
 # run for remaining valid optimizers (because cvxpy fails for high data dimension, so don't continue with cvxpy after it fails once)
@@ -277,4 +277,3 @@ plt.xlabel("Computation piece")
 plt.ylabel("Time (s)")
 plt.legend()
 plt.show()
-
