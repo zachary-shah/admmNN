@@ -390,7 +390,7 @@ plt.bar(optimizer_labs, dual_updates, bottom=primal_updates+primal_updates2+prec
 plt.bar(optimizer_labs, primal_updates2, bottom=precomps+primal_updates, color = "lightcoral", alpha = alph, label='v updates')
 plt.bar(optimizer_labs, primal_updates, bottom=precomps, color = "darkred", alpha = alph, label='u updates')
 plt.bar(optimizer_labs, precomps, color = "black", alpha = alph, label="precomps")
-plt.title(f"Mean solve time breakdown ({args.device})")
+plt.title(f"Mean runtime for {args.max_iter} iterations ({args.device})")
 plt.ylabel("Time (s)")
 plt.legend(facecolor='white',frameon = True)
 plt.savefig(os.path.join(args.save_root, "times-"+base_save_str))
