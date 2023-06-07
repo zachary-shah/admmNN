@@ -28,17 +28,17 @@ P_S =  20 # number of sampled hyperplanes
 backends = ["torch"] # provide a list of backends to try (or just one in list format)
 loss_type = 'mse' #either 'mse' or 'ce'
 ntrials = 5 # number of trials for each experiment (to average over)
-max_iter = 30 # max number of outer optimization iterations
+max_iter = 5 # max number of outer optimization iterations
 accuracy_func = binary_classifcation_accuracy
 bias = True # add bias term to weights
 verbose_training = True
 seed = None
 
 # ----------- Decide which optimizer methods to generate (at least one below must be "True") -----------
-admm_runner = True # to run vanilla admm on selected backends
-rbcd_runner = True # to run RBCD on selected backends 
-cg_runner = True # to run ADMM with standard conjugate gradient on selected backends
-pcg_runner = True # to run ADMM with diagonal (jacobi) preconditioned conjugate gradient on selected backends
+admm_runner = False # to run vanilla admm on selected backends
+rbcd_runner = False # to run RBCD on selected backends 
+cg_runner = False # to run ADMM with standard conjugate gradient on selected backends
+pcg_runner = False # to run ADMM with diagonal (jacobi) preconditioned conjugate gradient on selected backends
 nysadmm_runner = True # to run ADMM with nystrom preconditioned conjugate gradient on selected backends
 
 """#################################################################"""

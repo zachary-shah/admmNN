@@ -1,10 +1,10 @@
 """
 Various classes and functions for ADMM 
 """
+from typing import Tuple
 
 from utils.typing_utils import get_backend_type, as_default_datatype, EvalFunction, ArrayType
 import utils.math_utils as mnp
-from utils.cg_utils import nystrom_sketch
 
 """
 Constants
@@ -332,8 +332,8 @@ class Linear_Sys():
             if params.admm_solve_type == 'cg':
                 print(f"\tCG params: {self.cg_params}")
         
-        # construct matrix A unless using cg or jacobi pcg (these don't require matrix A computed)
-        if self.solver_type == 'cholesky' or (self.solver_type == 'pcg' and self.cg_params['preconditioner'].lower() != "jacobi") :
+        # construct matrix A only for cholesky solve
+        if self.solver_type == 'cholesky':
             if verbose: print("Constructing A matrix...")
 
             A = mnp.eye(2 * d * P_S, backend_type=params.datatype_backend)
@@ -386,11 +386,11 @@ class Linear_Sys():
                 self.M = lambda u : u / diags_tensor
 
             elif self.cg_params['preconditioner'].lower() == "nystrom":
-                rank = 10 #TODO: set rank more intelligently
-                if verbose: print(f"  Using Nystrom preconditioner with rank={rank} (TODO: parameterize / smart set rank)")
+                rank = int(max(min(10, mnp.sqrt(2 * d * P_S)), 100)) #TODO: set rank more intelligently
+                if verbose: print(f"  Using Nystrom preconditioner with initial rank={rank} (TODO: parameterize / smart set rank)")
 
                 # compute randomized nystrom approximation
-                self.U, self.S = nystrom_sketch(A, rank=rank)
+                self.U, self.S = nystrom_sketch_linoped(OPS, rank=rank)
 
                 # this is how to apply the approximation
                 def nystrom_precond(u):
@@ -639,3 +639,143 @@ def proxl2(z: ArrayType,
         return res
     else:
         raise('Wrong dimensions')
+
+
+def nystrom_sketch_linoped(OPS, rank: int) -> Tuple[ArrayType, ArrayType]:
+    """
+    Computes the Nystrom approximation via sketch A.T@(A@Omega) following Tropp at al. 2017
+    Uses linops to compute Y from A; memory efficient
+    
+    Parameters
+    ----------
+    OPS: FG_Operators
+        FG operators containing A operation
+    rank : int
+        number of top eigenvalues to flatten in preconditioning
+
+    Returns
+    ----------
+    U : ArrayType
+        first preconditioning matrix
+    S : ArrayType
+        second preconditioning matrix
+    """
+
+    backend_type = OPS.backend_type
+    n = 2 * OPS.P_S * OPS.d
+
+    Omega = mnp.randn((n,rank), backend_type=backend_type) #Generate test matrix
+    Omega = mnp.qr(Omega)[0]
+
+    # compute sketch A @ omega one column at a time
+    Y = mnp.zeros_like(Omega)
+    for col in range(Y.shape[1]):
+        col_tensor = vec_to_tensor(Omega[:,col], OPS.d, OPS.P_S)
+        Y[:,col] = tensor_to_vec(OPS.A(col_tensor))
+
+    v = mnp.sqrt(rank) * mnp.spacing(mnp.norm(Y)) #Compute shift according to Martinsson & Tropp 2020
+    Y += v * Omega # Add shift
+
+    Core = Omega.T @ Y
+
+    try:
+        C = mnp.cholesky(Core) #Do Cholesky on Core
+
+    except:
+        print("Failed cholesky on core. doing SVD and adding shift instead.")
+
+        eig_vals = mnp.eigh(Core, eigvals_only=True) #If Cholesky fails do SVD and add shift for it to succeed
+
+        v = v + mnp.abs(mnp.min(eig_vals))
+
+        Core = Core + v * mnp.eye(rank, backend_type=backend_type)
+
+        C = mnp.cholesky(Core)
+
+    B = mnp.solve_triangular(C, Y.T, lower = True, check_finite = False)
+
+    U, S, _ = mnp.svd(B.T)
+
+    S = mnp.relu(S**2 - v) # Subtract off shift
+
+    return U, S
+
+def nystrom_sketch(A: ArrayType, 
+                   rank: int) -> Tuple[ArrayType, ArrayType]:
+    """
+    Computes the Nystrom approximation via sketch A.T@(A@Omega) following Tropp at al. 2017
+    Requires full matrix A 
+
+    Parameters
+    ----------
+    A: ArrayType
+        matrix to precondition
+    rank : int
+        number of top eigenvalues to flatten in preconditioning
+
+    Returns
+    ----------
+    U : ArrayType
+        first preconditioning matrix
+    S : ArrayType
+        second preconditioning matrix
+    """
+
+    backend_type = get_backend_type(A)
+
+    m, n = A.shape
+
+    Omega = mnp.randn((n,rank), backend_type=backend_type) #Generate test matrix
+    Omega = mnp.qr(Omega)[0]
+
+    Y = A.T @ (A @ Omega) # Compute sketch
+
+    v = mnp.sqrt(rank) * mnp.spacing(mnp.norm(Y)) #Compute shift according to Martinsson & Tropp 2020
+    Yv = Y + v * Omega # Add shift
+
+    Core = Omega.T @ Yv
+
+    try:
+        C = mnp.cholesky(Core) #Do Cholesky on Core
+    except:
+        print("Failed cholesky on core. doing SVD and adding shift instead.")
+
+        eig_vals = mnp.eigh(Core, eigvals_only=True) #If Cholesky fails do SVD and add shift for it to succeed
+
+        v = v + mnp.abs(mnp.min(eig_vals))
+
+        Core = Core + v * mnp.eye(rank, backend_type=backend_type)
+
+        C = mnp.cholesky(Core)
+
+    B = mnp.solve_triangular(C, Yv.T, lower = True, check_finite = False)
+
+    U, S, V = mnp.svd(B.T)
+
+    S = mnp.relu(S**2 - v) # Subtract off shift
+
+    return U, S
+
+def random_sketch(A, rank):
+
+    """
+    Computes Random sketch following mert's paper
+    """
+
+    raise NotImplementedError("TODO: implement random sketching according to mert's paper")
+
+    return U, S
+
+def hadamard(m, backend_type):
+    """
+    Computes mxm hadamard matrix
+    """
+
+    if m == 2:
+        return mnp.array([[1, 1],
+                         [1, -1]], backend_type=backend_type)
+    else:
+        Hm2 = hadamard(m//2, backend_type)
+        row2 = mnp.hstack((Hm2, -Hm2))
+        row1 = mnp.hstack((Hm2, Hm2))
+        return mnp.vstack((row1, row2))
