@@ -9,7 +9,7 @@ Script generates 2 plots:
 import argparse
 import numpy as np
 import matplotlib
-matplotlib.use('WebAgg')
+#matplotlib.use('WebAgg')
 import matplotlib.pyplot as plt
 plt.style.use('seaborn')
 
