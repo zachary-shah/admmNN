@@ -334,7 +334,7 @@ for (k, optimizer_config) in enumerate(optimizer_configs):
 
         optimizer_config.update(device="cpu")
 
-        if optimizer_labs[k].startswith("NCVX"):
+        if optimizer_labs[2*k].startswith("NCVX"):
             rl, el, ra, ea, st = run_nn_mlp(X_train, y_train, X_test, y_test, optimizer_config)
             train_loss[2*k, t] = rl
             train_acc[2*k, t] = ra
@@ -352,7 +352,7 @@ for (k, optimizer_config) in enumerate(optimizer_configs):
 
         optimizer_config.update(device="cuda")
 
-        if optimizer_labs[k].startswith("NCVX"):
+        if optimizer_labs[2*k+1].startswith("NCVX"):
             rl, el, ra, ea, st = run_nn_mlp(X_train, y_train, X_test, y_test, optimizer_config)
             train_loss[2*k+1, t] = rl
             train_acc[2*k+1, t] = ra
