@@ -398,7 +398,7 @@ plot_metric(test_acc, x_vals, optimizer_labs,
             title_str = '(d) Test Accuracy',
             xlabel_str = "ADMM iteration",
             use_legend=True)
-plt.suptitle(f"Figure 1. Performance vs. iteration ({args.device})")
+plt.suptitle(f"Figure 1. Performance vs. iteration")
 plt.savefig(os.path.join(args.save_root, "performance-"+base_save_str))
 
 plt.figure(figsize=(9,6), dpi=300)
