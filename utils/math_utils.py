@@ -428,7 +428,7 @@ def spacing(x: ScalarTypes):
     elif backend_type == "torch":
         dev = x.device
         x = x.cpu().numpy()
-        return torch.Tensor(np.spacing(x)).to(TORCH_DTYPE).to(dev)
+        return torch.Tensor([np.spacing(x)]).to(TORCH_DTYPE).to(dev)
     else:
         return np.spacing(x)
 
