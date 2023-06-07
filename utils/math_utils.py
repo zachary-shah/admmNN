@@ -416,11 +416,12 @@ def inf(backend_type: str = "numpy"):
     else:
         return np.inf
 
-def spacing(x: ScalarTypes, 
-            backend_type: str = "numpy"):
+def spacing(x: ScalarTypes):
     """
     Get distance to next largest number
     """
+
+    backend_type = get_backend_type(x)
 
     if backend_type == "jax":
         return jnp.spacing(x)
