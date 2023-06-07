@@ -577,19 +577,25 @@ def tensor_to_vec(tensor: ArrayType) -> ArrayType:
 
     backend_type = get_backend_type(tensor)
 
-    # hacky way to make empty array
-    vec = mnp.zeros(0, backend_type=backend_type)
+    # # hacky way to make empty array
+    # vec = mnp.zeros(0, backend_type=backend_type)
 
-    for i in range(tensor.shape[0]):
-        for j in range(tensor.shape[2]):
-            vec = mnp.append(vec, tensor[i, :, j])
+    # for i in range(tensor.shape[0]):
+    #     for j in range(tensor.shape[2]):
+    #         vec = mnp.append(vec, tensor[i, :, j])
+
+    if len(tensor.shape) == 4:
+        B = tensor.shape[0]
+        vec = mnp.reshape(tensor, (B, -1))
+    else:
+        vec = mnp.reshape(tensor, (-1,))
     return vec
 
 def vec_to_tensor(vec: ArrayType, 
                   d: int, 
                   P_S: int) -> ArrayType:
     """
-    Tensorize a (2*d*P_S) vector
+    Tensorize a (2*d*P_S) or (B,2*d*P_S) vector
 
     Parameters
     ----------
@@ -607,14 +613,19 @@ def vec_to_tensor(vec: ArrayType,
     """
     backend_type = get_backend_type(vec)
 
-    tensor = mnp.zeros((2, d, P_S), backend_type=backend_type)
-    for i in range(tensor.shape[0]):
-        for j in range(tensor.shape[2]):
-            inds = mnp.arange(d * j, d * (j + 1), backend_type=backend_type) + i * d * P_S
-            if backend_type == "jax":
-                tensor = tensor.at[i, :, j].set(vec[inds])
-            else:
-                tensor[i, :, j] = vec[inds]
+    # tensor = mnp.zeros((2, d, P_S), backend_type=backend_type)
+    # for i in range(tensor.shape[0]):
+    #     for j in range(tensor.shape[2]):
+    #         inds = mnp.arange(d * j, d * (j + 1), backend_type=backend_type) + i * d * P_S
+    #         if backend_type == "jax":
+    #             tensor = tensor.at[i, :, j].set(vec[inds])
+    #         else:
+    #             tensor[i, :, j] = vec[inds]
+
+    if len(vec.shape) > 1:
+        tensor = mnp.reshape(vec, (-1, 2, d, P_S))
+    else:
+        tensor = mnp.reshape(vec, (2, d, P_S))
     return tensor
 
 def proxl2(z: ArrayType, 
@@ -668,10 +679,34 @@ def nystrom_sketch_linoped(OPS, rank: int) -> Tuple[ArrayType, ArrayType]:
     Omega = mnp.qr(Omega)[0]
 
     # compute sketch A @ omega one column at a time
-    Y = mnp.zeros_like(Omega)
-    for col in range(Y.shape[1]):
-        col_tensor = vec_to_tensor(Omega[:,col], OPS.d, OPS.P_S)
-        Y[:,col] = tensor_to_vec(OPS.A(col_tensor))
+    use_crazy_memory = False
+    if use_crazy_memory:
+
+        # Convert to tensor       
+        omega_tens = vec_to_tensor(Omega.T, OPS.d, OPS.P_S)
+        
+        # I
+        b = mnp.copy(omega_tens)
+
+        # Compute X omega
+        X_omega = OPS.X @ omega_tens
+
+        # G
+        b += OPS.X.T @ X_omega
+
+        # F
+        F_omega = mnp.sum(X_omega * OPS.f_diag[None, ...], axis=(-1, -3))
+        expanded = OPS.f_diag[None, ...] * F_omega[:, None, :, None]
+        b += OPS.X.T @ expanded / OPS.rho
+
+        # Reshape
+        Y = tensor_to_vec(b).T
+    else:
+        Y = mnp.zeros_like(Omega)
+        for col in range(Y.shape[1]):
+            col_tensor = vec_to_tensor(Omega[:,col], OPS.d, OPS.P_S)
+            col_A = OPS.A(col_tensor)
+            Y[:,col] = tensor_to_vec(col_A)
 
     v = mnp.sqrt(rank) * mnp.spacing(mnp.norm(Y)) #Compute shift according to Martinsson & Tropp 2020
     Y += v * Omega # Add shift
@@ -691,9 +726,9 @@ def nystrom_sketch_linoped(OPS, rank: int) -> Tuple[ArrayType, ArrayType]:
         Core = Core + v * mnp.eye(rank, backend_type=backend_type)
 
         C = mnp.cholesky(Core)
-
+    
     B = mnp.solve_triangular(C, Y.T, lower = True, check_finite = False)
-
+    
     U, S, _ = mnp.svd(B.T)
 
     S = mnp.relu(S**2 - v) # Subtract off shift
