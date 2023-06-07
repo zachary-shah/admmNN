@@ -322,7 +322,7 @@ test_loss = np.zeros((nopt*2, args.ntrials, args.max_iter)) * np.nan
 test_acc = np.zeros((nopt*2, args.ntrials, args.max_iter)) * np.nan
 
 solve_time_labels = ["precomps", "u update", "v update", "s update", "dual update"]
-solve_time = np.zeros((nopt, args.ntrials, len(solve_time_labels))) * np.nan
+solve_time = np.zeros((nopt*2, args.ntrials, len(solve_time_labels))) * np.nan
 
 # run for remaining valid optimizers (because cvxpy fails for high data dimension, so don't continue with cvxpy after it fails once)
 for (k, optimizer_config) in enumerate(optimizer_configs):
