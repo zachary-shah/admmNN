@@ -65,6 +65,7 @@ def parse_args():
     parser.add_argument("--pcg_runner_off", dest="pcg_runner", action="store_false")
     parser.add_argument("--nyspcg_runner_off", dest="nyspcg_runner", action="store_false")
     parser.add_argument("--backprop_runner_off", dest="backprop_runner", action="store_false")
+    parser.add_argument("--memory_save", action="store_true", default=False)
 
     args = parser.parse_args()
     return args
@@ -100,6 +101,7 @@ admm_optimizer_config = dict(
     bias = True,
     seed=args.seed,
     device=args.device,
+    memory_save = args.memory_save,
 )
 # # ----------- ADMM-CG solver params ------------
 cg_optimizer_config = dict(
@@ -113,6 +115,7 @@ cg_optimizer_config = dict(
     bias = True,
     seed=args.seed,
     device=args.device,
+    memory_save = args.memory_save,
     admm_solve_type='cg',
     cg_max_iters=10,
     cg_eps=1e-6,
@@ -129,6 +132,7 @@ pcg_optimizer_config = dict(
     bias = True,
     seed=args.seed,
     device=args.device,
+    memory_save = args.memory_save,
     admm_solve_type='cg',
     cg_max_iters=10,
     cg_eps=1e-6,
@@ -146,6 +150,7 @@ nys_optimizer_config = dict(
     bias = True,
     seed=args.seed,
     device=args.device,
+    memory_save = args.memory_save,
     admm_solve_type='cg',
     cg_max_iters=10,
     cg_eps=1e-6,
@@ -163,6 +168,7 @@ rbcd_optimizer_config = dict(
     bias = True,
     seed=args.seed,
     device=args.device,
+    memory_save = args.memory_save,
 )
 # # ----------- Backprop solver params ------------
 backprop_config = dict(

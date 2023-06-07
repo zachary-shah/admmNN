@@ -98,6 +98,7 @@ class CReLU_MLP():
                                  P_S=P_S, 
                                  loss_type=loss_type, 
                                  num_features=self.num_features, 
+                                 verbose=verbose_initialization,
                                  **kwargs)
 
         # preprocessing parameters
