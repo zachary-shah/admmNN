@@ -239,8 +239,8 @@ def admm_optimizer(parms: ADMM_Params,
         k += 1        
 
     # collect metrics (just keep as numpy arrays by default)
-    solver_metrics["train_loss"] = mnp.array(convert_backend_type(train_loss))
-    solver_metrics["train_acc"] = mnp.array(convert_backend_type(train_acc))
+    solver_metrics["train_loss"] = mnp.array(convert_backend_type(train_loss, target_backend="numpy"))
+    solver_metrics["train_acc"] = mnp.array(convert_backend_type(train_acc, target_backend="numpy"))
 
     solver_metrics["solve_time_breakdown"] = dict(
         time_precomp=time_precomp,
@@ -251,8 +251,8 @@ def admm_optimizer(parms: ADMM_Params,
     )
 
     if validate:
-        solver_metrics["val_loss"] = mnp.array(convert_backend_type(val_loss))
-        solver_metrics["val_acc"] = mnp.array(convert_backend_type(val_acc))
+        solver_metrics["val_loss"] = mnp.array(convert_backend_type(val_loss, target_backend="numpy"))
+        solver_metrics["val_acc"] = mnp.array(convert_backend_type(val_acc, target_backend="numpy"))
 
     # Show times
     if verbose:
