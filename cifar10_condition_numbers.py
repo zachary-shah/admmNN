@@ -27,12 +27,11 @@ def parse_args():
     parser.add_argument("--dataset_path", type=str, default="baADMM/datasets/cifar-10-batches-py") # path to cifar model
     parser.add_argument("--n_train", type=int, default=1000) # fixed number of training examples to use
     parser.add_argument("--n_test", type=int, default=1000) # fixed number of training examples to use
-    parser.add_argument("--ntrials", type=int, default=5) # number of trials
 
     parser.set_defaults(downsample=True)
     parser.add_argument('--no_downsample', dest='downsample', action='store_false', default=True) # downsample data dim to 100 if True
     parser.add_argument("--P_S", type=int, default=10) # number of sampled hyperplanes
-    parser.add_argument("--save_root", type=str, default="figures/cifar-10") # where to save figures to
+    parser.add_argument("--save_root", type=str, default="figures/cond_number") # where to save figures to
 
     args = parser.parse_args()
     return args
@@ -50,7 +49,7 @@ X = np.hstack([X_train, np.ones((X_train.shape[0],1))])
 print("Computing A...")
 
 # construct d-diags
-d_diags = get_hyperplane_cuts(X, P_S, seed=1)
+d_diags = get_hyperplane_cuts(X, P_S)
 OPS = FG_Operators(d_diags, X, rho=0.001)
 n, d = X.shape
 # construct A
@@ -78,11 +77,22 @@ kJ = np.linalg.cond(Jacobi * A)
 # condition number with nystrom sketch 
 print("Computing k(NA)...")
 
-U, S = nystrom_sketch(A, rank=10)
-rho = 1
-kN = np.linalg.cond((((S[-1] + rho) * (U / (S + rho)) @ U.T) + (np.eye(U.shape[0]) - U @ U.T)) @ A)
+N = 100
+ranks = np.arange(1,N)
+conds = []
+for rank in ranks:
+    print(f"rank={rank}/{max(ranks)}...", end='\r')
+    U, S = nystrom_sketch(A, rank=rank)
+    rho = 1
+    conds.append(np.linalg.cond((((S[-1] + rho) * (U / (S + rho)) @ U.T) + (np.eye(U.shape[0]) - U @ U.T)) @ A))
 
-
-print(f"Condition number of A: {kA}")
-print(f"Condition number of jacobi precond A: {kJ}")
-print(f"Condition number of nys precond A: {kN}")
+plt.figure()
+plt.plot(ranks, [kA] * (N-1), '--k', label=r"$\kappa(A)$")
+plt.plot(ranks, [kJ] * (N-1), '--r', label=r"Jacobi: $\kappa(J^{-1}A)$")
+plt.plot(ranks, conds, 'g', label=r"Nystrom: $\kappa(P^{-1}A)$")
+plt.title("Condition number with Nystrom Preconditioning")
+plt.xlabel("rank")
+plt.ylabel("condition number")
+plt.legend(facecolor='white',frameon = True,loc="upper right")
+plt.savefig(os.path.join(args.save_root, "condition_number.png"), dpi=300)
+plt.show()

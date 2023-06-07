@@ -775,7 +775,7 @@ def nystrom_sketch(A: ArrayType,
     Omega = mnp.randn((n,rank), backend_type=backend_type, device=device) #Generate test matrix
     Omega = mnp.qr(Omega)[0]
 
-    Y = A.T @ (A @ Omega) # Compute sketch
+    Y = (A @ Omega) # Compute sketch
 
     v = mnp.sqrt(rank) * mnp.spacing(mnp.norm(Y)) #Compute shift according to Martinsson & Tropp 2020
     Yv = Y + v * Omega # Add shift
