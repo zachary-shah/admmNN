@@ -218,18 +218,18 @@ def admm_optimizer(parms: ADMM_Params,
 
         # ----------- METRIC COMPUTATIONS -----------------
         y_hat = OPS.F_multop(u)
-        train_loss.append(loss_func(y_hat, y))
-        train_acc.append(acc_func(y_hat, y))
+        train_loss.append(convert_backend_type(loss_func(y_hat, y), target_backend="numpy")) 
+        train_acc.append(convert_backend_type(acc_func(y_hat, y), target_backend="numpy"))
         if validate:
             u_transform, alpha_transform = optimal_weights_transform(v[0], v[1], P_S, d, verbose=verbose)
             if len(alpha_transform) > 0:
                 y_hat_val = mnp.relu(X_val @ u_transform) @ alpha_transform
                 # loss and accuracy calculation
-                val_loss.append(loss_func(y_hat_val, y_val))
-                val_acc.append(acc_func(y_hat_val, y_val))
+                val_loss.append(convert_backend_type(loss_func(y_hat_val, y_val), target_backend="numpy"))
+                val_acc.append(convert_backend_type(acc_func(y_hat_val, y_val), target_backend="numpy"))
             # handle case where no weights are non-zero
             else:
-                val_loss.append(mnp.inf(parms.datatype_backend))
+                val_loss.append(mnp.inf())
                 val_acc.append(0)
 
             if verbose: print(f"iter = {k}, tr_loss = {train_loss[-1]}, tr_acc = {train_acc[-1]}, val_acc = {val_acc[-1]}")
@@ -239,8 +239,8 @@ def admm_optimizer(parms: ADMM_Params,
         k += 1        
 
     # collect metrics (just keep as numpy arrays by default)
-    solver_metrics["train_loss"] = mnp.array(convert_backend_type(train_loss, target_backend="numpy"))
-    solver_metrics["train_acc"] = mnp.array(convert_backend_type(train_acc, target_backend="numpy"))
+    solver_metrics["train_loss"] = mnp.array(train_loss)
+    solver_metrics["train_acc"] = mnp.array(train_acc)
 
     solver_metrics["solve_time_breakdown"] = dict(
         time_precomp=time_precomp,
@@ -251,8 +251,8 @@ def admm_optimizer(parms: ADMM_Params,
     )
 
     if validate:
-        solver_metrics["val_loss"] = mnp.array(convert_backend_type(val_loss, target_backend="numpy"))
-        solver_metrics["val_acc"] = mnp.array(convert_backend_type(val_acc, target_backend="numpy"))
+        solver_metrics["val_loss"] = mnp.array(val_loss)
+        solver_metrics["val_acc"] = mnp.array(val_acc)
 
     # Show times
     if verbose:
