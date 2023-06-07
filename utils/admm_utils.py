@@ -202,6 +202,10 @@ class FG_Operators():
         self.rho = rho
         self.mem_save = mem_save
         self.backend_type = get_backend_type(X)
+        if self.backend_type == "torch":
+            self.device = X.device
+        else:
+            self.device = "cpu"
         
         self.f_diag = mnp.vstack((1.0 * d_diags[None, ...], 
                                       -1.0 * d_diags[None, ...]))
@@ -222,7 +226,7 @@ class FG_Operators():
             if transpose:
                 vec = vec.squeeze()
                 assert vec.shape == (self.n,)
-                out = mnp.zeros((2, self.d, self.P_S))
+                out = mnp.zeros((2, self.d, self.P_S), backend_type=self.backend_type, device=self.device)
                 for i in range(self.P_S):
                     if self.backend_type == "jax":
                         out = out.at[0,:,i].set(self.F(i).T @ vec)
@@ -232,7 +236,7 @@ class FG_Operators():
                         out[1,:,i] -= self.F(i).T @ vec
             else:
                 assert vec.shape == (2, self.d, self.P_S)
-                out = mnp.zeros((self.n,), backend_type=self.backend_type)
+                out = mnp.zeros((self.n,), backend_type=self.backend_type, device=self.device)
                 for i in range(self.P_S):
                     out += self.F(i) @ (vec[0,:,i] - vec[1,:,i])
         else:
@@ -251,7 +255,7 @@ class FG_Operators():
         
         if self.mem_save:
             # @Zach's implimentation
-            out = mnp.zeros((2, self.d if transpose else self.n, self.P_S), backend_type=self.backend_type)
+            out = mnp.zeros((2, self.d if transpose else self.n, self.P_S), backend_type=self.backend_type, device=self.device)
 
             for i in range(self.P_S):
                 for j in range(2):
@@ -323,6 +327,7 @@ class Linear_Sys():
             self.solver_type = params.admm_solve_type
 
         self.backend_type = params.datatype_backend
+        self.device = params.device
         self.cg_params = params.admm_cg_solve_params
         self.verbose = verbose
 
@@ -336,7 +341,7 @@ class Linear_Sys():
         if self.solver_type == 'cholesky':
             if verbose: print("Constructing A matrix...")
 
-            A = mnp.eye(2 * d * P_S, backend_type=params.datatype_backend)
+            A = mnp.eye(2 * d * P_S, backend_type=params.datatype_backend, device=self.device)
             for i in range(P_S):
                 for j in range(P_S):
                     # perform multiplication 
@@ -372,7 +377,7 @@ class Linear_Sys():
                 if verbose: print("  Using Jacobi diagonal preconditioner")
 
                 # form only necessary parts of A to make preconditioner
-                diags_tensor = mnp.ones((2, d, P_S), backend_type=params.datatype_backend)
+                diags_tensor = mnp.ones((2, d, P_S), backend_type=params.datatype_backend, device=self.device)
                 XiX_diag = mnp.diagonal(OPS.X.T @ OPS.X)
 
                 for i in range(P_S):
@@ -542,18 +547,23 @@ def get_hyperplane_cuts(X: ArrayType,
 
     backend_type = get_backend_type(X)
 
+    if backend_type == "torch":
+        device = X.device
+    else:
+        device = "cpu"
+
     if seed is not None: mnp.seed(seed, backend_type=backend_type)
 
     n,d = X.shape
 
-    d_diags = X @ mnp.randn((d, P), backend_type=backend_type) >= 0
+    d_diags = X @ mnp.randn((d, P), backend_type=backend_type, device=device) >= 0
 
     # make unique
     d_diags = mnp.unique(d_diags, axis=1)
 
     # add samples if needed
     while d_diags.shape[1] != P:
-        d_diags = mnp.append(d_diags, X @ mnp.randn((d, P), backend_type=backend_type) >= 0, axis=1)
+        d_diags = mnp.append(d_diags, X @ mnp.randn((d, P), backend_type=backend_type, device=device) >= 0, axis=1)
         d_diags = mnp.unique(d_diags, axis=1)
         d_diags = d_diags[:, :P]
     
@@ -675,7 +685,7 @@ def nystrom_sketch_linoped(OPS, rank: int) -> Tuple[ArrayType, ArrayType]:
     backend_type = OPS.backend_type
     n = 2 * OPS.P_S * OPS.d
 
-    Omega = mnp.randn((n,rank), backend_type=backend_type) #Generate test matrix
+    Omega = mnp.randn((n,rank), backend_type=backend_type, device=OPS.device) #Generate test matrix
     Omega = mnp.qr(Omega)[0]
 
     # compute sketch A @ omega one column at a time
@@ -723,7 +733,7 @@ def nystrom_sketch_linoped(OPS, rank: int) -> Tuple[ArrayType, ArrayType]:
 
         v = v + mnp.abs(mnp.min(eig_vals))
 
-        Core = Core + v * mnp.eye(rank, backend_type=backend_type)
+        Core = Core + v * mnp.eye(rank, backend_type=backend_type, device=OPS.device)
 
         C = mnp.cholesky(Core)
     
@@ -758,9 +768,11 @@ def nystrom_sketch(A: ArrayType,
 
     backend_type = get_backend_type(A)
 
+    device = "cpu" if backend_type != "torch" else A.device
+
     m, n = A.shape
 
-    Omega = mnp.randn((n,rank), backend_type=backend_type) #Generate test matrix
+    Omega = mnp.randn((n,rank), backend_type=backend_type, device=device) #Generate test matrix
     Omega = mnp.qr(Omega)[0]
 
     Y = A.T @ (A @ Omega) # Compute sketch
@@ -779,7 +791,7 @@ def nystrom_sketch(A: ArrayType,
 
         v = v + mnp.abs(mnp.min(eig_vals))
 
-        Core = Core + v * mnp.eye(rank, backend_type=backend_type)
+        Core = Core + v * mnp.eye(rank, backend_type=backend_type, device=device)
 
         C = mnp.cholesky(Core)
 
@@ -801,14 +813,14 @@ def random_sketch(A, rank):
 
     return U, S
 
-def hadamard(m, backend_type):
+def hadamard(m, backend_type, device):
     """
     Computes mxm hadamard matrix
     """
 
     if m == 2:
         return mnp.array([[1, 1],
-                         [1, -1]], backend_type=backend_type)
+                         [1, -1]], backend_type=backend_type, device=device)
     else:
         Hm2 = hadamard(m//2, backend_type)
         row2 = mnp.hstack((Hm2, -Hm2))

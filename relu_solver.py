@@ -211,7 +211,7 @@ class CReLU_MLP():
 
         # add bias term to data if desired
         if self.bias:
-            X = mnp.hstack([X, mnp.ones((X.shape[0],1), backend_type=self.datatype_backend)])
+            X = mnp.hstack([X, mnp.ones((X.shape[0],1), backend_type=self.datatype_backend, device=self.device)])
 
         # convert labels if provided
         if y is not None:

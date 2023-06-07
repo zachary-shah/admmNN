@@ -436,7 +436,7 @@ def spacing(x: ScalarTypes,
 def array(object: list,
           dtype: Union[int, float] = None,
           backend_type: str = "numpy",
-          device: torch.device = None) -> ArrayType:
+          device: torch.device = "cpu") -> ArrayType:
     """
     Make an array from a list on specified backend. 
     If using torch, will generate a torch.tensor type.
@@ -470,7 +470,8 @@ def array(object: list,
 
 def zeros(shape: Union[int, Tuple[int]],
           backend_type: str,
-          dtype: type = float) -> ArrayType: 
+          dtype: type = float,
+          device: torch.device = "cpu",) -> ArrayType: 
 
     """
     Get array of zeros with desired shape in correct backend
@@ -496,13 +497,14 @@ def zeros(shape: Union[int, Tuple[int]],
     if backend_type == "jax":
         return jnp.zeros(shape, dtype=dtype)
     elif backend_type == "torch":
-        return torch.zeros(shape, dtype=TORCH_DTYPE)
+        return torch.zeros(shape, dtype=TORCH_DTYPE, device=device)
     else: # else numpy
         return np.zeros(shape, dtype=dtype)
 
 def ones(shape: Union[int, Tuple[int]],
           backend_type: str,
-          dtype: type = float) -> ArrayType: 
+          dtype: type = float,
+          device: torch.device = "cpu",) -> ArrayType: 
 
     """
     Get array of ones with desired shape in correct backend
@@ -528,7 +530,7 @@ def ones(shape: Union[int, Tuple[int]],
     if backend_type == "jax":
         return jnp.ones(shape, dtype=JAX_DTYPE)
     elif backend_type == "torch":
-        return torch.ones(shape, dtype=TORCH_DTYPE)
+        return torch.ones(shape, dtype=TORCH_DTYPE, device=device)
     else: # else numpy
         return np.ones(shape, dtype=NP_DTYPE)
 
@@ -585,6 +587,7 @@ def ones_like(x: ArrayType) -> ArrayType:
 def arange(start: Union[int,float],
            stop: Union[int,float],
            backend_type: str,
+           device: torch.device = "cpu",
            step: Union[int,float] = 1) -> ArrayType: 
 
     """
@@ -598,6 +601,8 @@ def arange(start: Union[int,float],
         value 1 greater than end value in array
     step : int
         step to take in between values of array's entries
+    device : torch.device
+      Device to load torch.Tensor onto 
 
     Returns
     -------
@@ -610,14 +615,14 @@ def arange(start: Union[int,float],
     if backend_type == "jax":
         return jnp.arange(start, stop, step)
     elif backend_type == "torch":
-        return torch.arange(start, stop, step)
+        return torch.arange(start, stop, step).to(device)
     else: # else numpy
         return np.arange(start, stop, step)   
 
 def eye(N: int,
         M: int = None,
         dtype: Union[int, float] = None,
-        device: torch.device = None,
+        device: torch.device = "cpu",
         backend_type: str = "numpy") -> ArrayType: 
 
     """
@@ -938,7 +943,8 @@ def unique(ar: ArrayType,
         return np.unique(ar, axis=axis)
     
 def randn(size: Sequence[int],
-          backend_type: str) -> ArrayType:
+          backend_type: str,
+          device: str = "cpu") -> ArrayType:
     
     """
     Get array or tensor of random iid numbers sampled from normal distribution
@@ -962,12 +968,13 @@ def randn(size: Sequence[int],
         y = np.random.randn(*size)
         return convert_backend_type(y, target_backend="jax").astype(JAX_DTYPE)
     elif backend_type == "torch":
-        return torch.randn(*size, dtype=TORCH_DTYPE)
+        return torch.randn(*size, dtype=TORCH_DTYPE, device=device)
     else: # else numpy
         return np.random.randn(*size).astype(NP_DTYPE)
     
 def rand(size: Sequence[int],
-          backend_type: str) -> ArrayType:
+          backend_type: str,
+          device: str = "cpu") -> ArrayType:
     
     """
     Get array or tensor of randoms numbers sampled from unif [0,1] distribution
@@ -991,7 +998,7 @@ def rand(size: Sequence[int],
         y = np.random.rand(*size)
         return convert_backend_type(y, target_backend="jax").astype(JAX_DTYPE)
     elif backend_type == "torch":
-        return torch.rand(*size, dtype=TORCH_DTYPE)
+        return torch.rand(*size, dtype=TORCH_DTYPE, device=device)
     else: # else numpy
         return np.random.rand(*size).astype(NP_DTYPE)
 

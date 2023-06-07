@@ -125,15 +125,15 @@ def admm_optimizer(parms: ADMM_Params,
 
     # --------------- Init Optim Params ---------------
     # u contains u1 ... uP, z1... zP 
-    u = mnp.zeros((2, d, P_S), backend_type=parms.datatype_backend)
+    u = mnp.zeros((2, d, P_S), backend_type=parms.datatype_backend, device=parms.device)
     # v contrains v1 ... vP, w1 ... wP
-    v = mnp.zeros((2, d, P_S), backend_type=parms.datatype_backend)
+    v = mnp.zeros((2, d, P_S), backend_type=parms.datatype_backend, device=parms.device)
     # slacks s1 ... sP, t1 ... tP
-    s = mnp.zeros((2, n, P_S), backend_type=parms.datatype_backend)
+    s = mnp.zeros((2, n, P_S), backend_type=parms.datatype_backend, device=parms.device)
     # lam contains lam11 lam12 ... lam1P lam21 lam22 ... lam2P
-    lam = mnp.zeros((2, d, P_S), backend_type=parms.datatype_backend)
+    lam = mnp.zeros((2, d, P_S), backend_type=parms.datatype_backend, device=parms.device)
     # nu contains nu11 nu12 ... nu1P nu21 nu22 ... nu2P
-    nu = mnp.zeros((2, n, P_S), backend_type=parms.datatype_backend)
+    nu = mnp.zeros((2, n, P_S), backend_type=parms.datatype_backend, device=parms.device)
 
     # --------------- Precomputations ---------------
     start = perf_counter()
