@@ -328,7 +328,7 @@ solve_time = np.zeros((nopt, args.ntrials, len(solve_time_labels))) * np.nan
 for (k, optimizer_config) in enumerate(optimizer_configs):
     for t in range(args.ntrials):
 
-        if args.backend == "torch" and args.device == "cuda": torch.cuda.empty_cache()
+        if args.backend == "torch": torch.cuda.empty_cache()
 
         print(f"{optimizer_labs[k]} trial {t+1}/{args.ntrials}")
 
