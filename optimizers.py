@@ -8,7 +8,7 @@ import cvxpy as cp
 from time import perf_counter
 from typing import Tuple, Union
 
-from utils.typing_utils import ArrayType, EvalFunction
+from utils.typing_utils import ArrayType, EvalFunction, convert_backend_type
 from utils.admm_utils import ADMM_Params, FG_Operators, Linear_Sys, get_hyperplane_cuts, tensor_to_vec, proxl2
 from utils.primal_update_utils import RBCD_update
 from utils.relu_utils import optimal_weights_transform
@@ -239,8 +239,8 @@ def admm_optimizer(parms: ADMM_Params,
         k += 1        
 
     # collect metrics (just keep as numpy arrays by default)
-    solver_metrics["train_loss"] = mnp.array(train_loss)
-    solver_metrics["train_acc"] = mnp.array(train_acc)
+    solver_metrics["train_loss"] = mnp.array(convert_backend_type(train_loss))
+    solver_metrics["train_acc"] = mnp.array(convert_backend_type(train_acc))
 
     solver_metrics["solve_time_breakdown"] = dict(
         time_precomp=time_precomp,
@@ -251,8 +251,8 @@ def admm_optimizer(parms: ADMM_Params,
     )
 
     if validate:
-        solver_metrics["val_loss"] = mnp.array(val_loss)
-        solver_metrics["val_acc"] = mnp.array(val_acc)
+        solver_metrics["val_loss"] = mnp.array(convert_backend_type(val_loss))
+        solver_metrics["val_acc"] = mnp.array(convert_backend_type(val_acc))
 
     # Show times
     if verbose:
