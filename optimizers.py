@@ -24,6 +24,7 @@ def cvxpy_optimizer(parms: ADMM_Params,
                     loss_func: EvalFunction,
                     acc_func: EvalFunction,
                     max_iter: int, 
+                    max_time: int = 120,
                     val_data: Union[None, Tuple[ArrayType, ArrayType]] = None,
                     verbose: bool = False,
                     ):
@@ -98,6 +99,7 @@ def admm_optimizer(parms: ADMM_Params,
                     loss_func: EvalFunction,
                     acc_func: EvalFunction,
                     max_iter: int, 
+                    max_time: int = 120,
                     val_data: Union[None, Tuple[ArrayType, ArrayType]] = None,
                     verbose: bool = False,
                     ):
@@ -136,7 +138,10 @@ def admm_optimizer(parms: ADMM_Params,
     nu = mnp.zeros((2, n, P_S), backend_type=parms.datatype_backend, device=parms.device)
 
     # --------------- Precomputations ---------------
+    # get time that has passed each iteration (first iteration has a lot of time due to precomputation)
     start = perf_counter()
+    iteration_time = 0
+    total_time = 0
 
     if verbose: print("  Completing precomputations...")
 
@@ -157,21 +162,34 @@ def admm_optimizer(parms: ADMM_Params,
         raise NotImplementedError("Unexpected mode for ADMM optimization.")
     
     time_precomp = perf_counter() - start
-    
+    iteration_time += time_precomp
+
     if verbose: print(f'\tPre Computations Took {time_precomp:.3f}s')
 
     # --------------- Iterative Updates ---------------
-    if verbose: print(f'\nBeginning descent with maximum {max_iter} iterations: ')
+    if verbose: print(f'\nBeginning descent with maximum {max_iter} iterations and max solve time of {max_time}: ')
 
     # benchmark times
     time_u, time_v, time_s, time_dual = 0, 0, 0, 0
 
     # keep track of losses
-    train_loss, train_acc = [], []
+    train_loss, train_acc, iteration_timepoints = [], [], []
     if validate: val_loss, val_acc = [], []
 
-    k = 0 
-    while k < max_iter:
+    # optimality conditions
+    u_v_dist = mnp.inf(backend_type=parms.datatype_backend)
+    u_optimality = mnp.inf(backend_type=parms.datatype_backend)
+    v_optimality = mnp.inf(backend_type=parms.datatype_backend)
+    k = 1 
+
+    # optimal if primal and dual conditions all within tolerance
+    def check_optimal():
+        not_optimal = True
+        if (np.array([u_v_dist,u_optimality,v_optimality]) <= parms.optimality_tolerance).all():
+            not_optimal = False
+        return not_optimal
+
+    while check_optimal():
 
         # ----------- PERFORM U UPDATE -----------------
         start = perf_counter()
@@ -189,6 +207,7 @@ def admm_optimizer(parms: ADMM_Params,
             parms.rho += parms.rho_increment
             
         time_u += perf_counter() - start
+        iteration_time += time_u
 
         # ----------- OTHER PARAMETER UPDATES -----------------
         # upates on v = (v1...vP, w1...wP) via prox operator
@@ -203,21 +222,30 @@ def admm_optimizer(parms: ADMM_Params,
             v[0] = proxl2(u[0] + lam[0], beta=parms.beta, gamma=1 / parms.rho)
             v[1] = proxl2(u[1] + lam[1], beta=parms.beta, gamma=1 / parms.rho)
         time_v += perf_counter() - start
+        iteration_time += time_v
 
         # updates on s = (s1...sP, t1...tP)
         start = perf_counter()
         Gu = OPS.G_multop(u)
         s = mnp.relu(Gu + nu)
         time_s += perf_counter() - start
+        iteration_time += time_s
 
         # finally, perform dual updates on lam=(lam11...lam2P), nu=(nu11...nu2P)
         start = perf_counter()
         lam += (u - v) * parms.gamma_ratio
         nu += (Gu - s) * parms.gamma_ratio
         time_dual += perf_counter() - start
+        iteration_time += time_dual
+
+        # calculations for checking optimality conditions
+        y_hat = OPS.F_multop(u)
+        u_v_dist = mnp.norm(u - v) + mnp.norm(Gu - s)
+        u_optimality = mnp.norm(OPS.F_multop(y_hat - y.squeeze(), transpose=True) + parms.rho * (lam + OPS.G_multop(nu, transpose=True)))
+        v_optimality = mnp.norm(parms.beta * v / mnp.norm(v, axis=2, keepdims=True) - parms.rho * lam)
+        if verbose: print(f"iter: {k}\n  u-v dist = {u_v_dist}, u resid = {u_optimality}, v resid = {v_optimality}")
 
         # ----------- METRIC COMPUTATIONS -----------------
-        y_hat = OPS.F_multop(u)
         train_loss.append(convert_backend_type(loss_func(y_hat, y), target_backend="numpy")) 
         train_acc.append(convert_backend_type(acc_func(y_hat, y), target_backend="numpy"))
         if validate:
@@ -232,17 +260,32 @@ def admm_optimizer(parms: ADMM_Params,
                 val_loss.append(mnp.inf())
                 val_acc.append(0)
 
-            if verbose: print(f"iter = {k}, tr_loss = {train_loss[-1]}, tr_acc = {train_acc[-1]}, val_acc = {val_acc[-1]}")
-        elif verbose: print(f"iter = {k}, loss = {train_loss[-1]}, acc = {train_acc[-1]}")
+            if verbose: print(f"  tr_loss = {train_loss[-1]}, tr_acc = {train_acc[-1]}, val_acc = {val_acc[-1]}")
+        elif verbose: print(f"  loss = {train_loss[-1]}, acc = {train_acc[-1]}")
+
+        # keep track of iteration times
+        total_time += iteration_time
+        iteration_timepoints.append(total_time)
+        iteration_time = 0
+
+        if total_time > max_time:
+            print(f"Warning: Solve time ({total_time}s) has exceeded max time of {max_time}s. Optimization not guranteed.")
+            break
+
+        if k == max_iter:
+            print(f"Warning: Reached max iteration count of {k}. Optimization not guranteed.")
+            break
 
         # iter step 
         k += 1        
 
     # collect metrics (just keep as numpy arrays by default)
+    solver_metrics["iteration_timepoints"] = mnp.array(iteration_timepoints)
     solver_metrics["train_loss"] = mnp.array(train_loss)
     solver_metrics["train_acc"] = mnp.array(train_acc)
 
     solver_metrics["solve_time_breakdown"] = dict(
+        total_time=total_time,
         time_precomp=time_precomp,
         time_u=time_u,
         time_v=time_v,
@@ -256,11 +299,12 @@ def admm_optimizer(parms: ADMM_Params,
 
     # Show times
     if verbose:
-        print(f"""\nOptimization complete!\
+        print(f"""\nOptimization runner terminating.\
         \nMetrics summary:\
         \n\tFinal train loss: {train_loss[-1]}\
         \n\tFinal train accuracy: {train_acc[-1]}\
         \nComputation times summary:\
+        \n\tTotal solve time: {total_time:.4f}s\
         \n\tPrecomputations:    {time_precomp:.4f}s\
         \n\tTotal U updates:    {time_u:.4f}s\
         \n\tTotal V updates:    {time_v:.4f}s\

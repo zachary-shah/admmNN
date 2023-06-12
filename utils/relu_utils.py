@@ -107,14 +107,14 @@ def optimal_weights_transform(v: ArrayType,
     assert v.shape == (d, P_S), f"Expected weight v shape to be ({d},{P_S}), but got {v.shape}"
     assert w.shape == (d, P_S), f"Expected weight w shape to be ({d},{P_S}), but got {w.shape}"
 
-    if verbose: 
-        datatype_backend = get_backend_type(v)
-        print(f"\nDoing weight transform: ")
-        v_shp = v.cpu().numpy().shape if datatype_backend == "torch" else v.shape
-        w_shp = w.cpu().numpy().shape if datatype_backend == "torch" else w.shape
-        print(f"  starting v shape: {v_shp}")
-        print(f"  starting w shape: {w_shp}")
-        print(f"  (d, P_S): ({d}, {P_S})")
+    # if verbose: 
+    #     datatype_backend = get_backend_type(v)
+    #     print(f"\tDoing weight transform: ")
+    #     v_shp = v.cpu().numpy().shape if datatype_backend == "torch" else v.shape
+    #     w_shp = w.cpu().numpy().shape if datatype_backend == "torch" else w.shape
+    #     print(f"  starting v shape: {v_shp}")
+    #     print(f"  starting w shape: {w_shp}")
+    #     print(f"\t  (d, P_S): ({d}, {P_S})")
 
     alpha1 = mnp.sqrt(mnp.norm(v, 2, axis=0))
     mask1 = alpha1 != 0
@@ -127,9 +127,9 @@ def optimal_weights_transform(v: ArrayType,
     alpha = mnp.append(alpha1[mask1], alpha2[mask2])
 
     if verbose: 
+        datatype_backend = get_backend_type(v)
         u_shp = u.cpu().numpy().shape if datatype_backend == "torch" else u.shape
         a_shp = alpha.cpu().numpy().shape if datatype_backend == "torch" else alpha.shape
-        print(f"  transformed u shape: {u_shp}")
-        print(f"  transformed alpha shape: {a_shp}")  
+        print(f"\tWeight transform generated: u shape: {u_shp}, alpha shape: {a_shp}")
 
     return u, alpha

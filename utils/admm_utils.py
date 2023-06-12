@@ -77,6 +77,7 @@ class ADMM_Params():
                  mode: str = "ADMM",
                  datatype_backend: str = "numpy",
                  device: str = "cpu",
+                 optimality_tolerance: float = None,
                  num_features: int = None,
                  loss_type: str = None,
                  memory_save: bool = None,
@@ -122,6 +123,7 @@ class ADMM_Params():
 
         # basic parameters
         self.loss_type = validate_param(loss_type, "loss_type", "mse", value_list=OPTIM_LOSSES)
+        self.optimality_tolerance = validate_param(optimality_tolerance, "optimality_tolerance", 1e-3)
         self.bias = validate_param(bias, "bias", True)
         self.memory_save = validate_param(memory_save, "memory_save", False)
         self.d = num_features + int(bias)

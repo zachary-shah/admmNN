@@ -128,12 +128,14 @@ class CReLU_MLP():
     """
     Optimize cvx neural network with initialized optimization parameters
         :param max_iter (optional) - max iterations for ADMM algorithm
+        :param max_iter (optional) - max time allowed for the ADMM solve before timeout thrown
         :param verbose (optional) - true to print live optimiation progress
         :param X_val (optional) - optionally provide validation data to get val accuracy during each iteration
         :param y_val (optional) - labels associated with validation data
     """
     def optimize(self,
                  max_iter: int = 100, 
+                 max_time: int = 120,
                  verbose: bool = False,
                  X_val: ArrayType = None,
                  y_val: ArrayType = None,):
@@ -155,6 +157,7 @@ class CReLU_MLP():
                                                       loss_func = self.loss_func, 
                                                       acc_func = self.acc_func, 
                                                       max_iter = max_iter, 
+                                                      max_time = max_time, 
                                                       verbose = verbose,
                                                       val_data = val_data)
         self.training_metrics["solve_time"] = perf_counter() - t_start
