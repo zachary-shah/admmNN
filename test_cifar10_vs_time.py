@@ -10,7 +10,7 @@ import os, argparse
 import numpy as np
 import pandas as pd
 import matplotlib
-matplotlib.use('WebAgg')
+#matplotlib.use('WebAgg')
 import matplotlib.pyplot as plt
 plt.style.use('seaborn')
 
@@ -73,7 +73,7 @@ def parse_args():
     return args
 
 args = parse_args()
-
+cg_max_iters = 50
 # ----------- Data parameters ------------
 
 # ----------- Decide which optimizer methods to generate (at least one below must be "True") -----------
@@ -119,7 +119,7 @@ cg_optimizer_config = dict(
     seed=args.seed,
     memory_save = args.memory_save,
     admm_solve_type='cg',
-    cg_max_iters=10,
+    cg_max_iters=cg_max_iters,
     cg_eps=1e-6,
 )
 # # ----------- ADMM-PCG-Jacobian solver params ------------
@@ -135,7 +135,7 @@ pcg_optimizer_config = dict(
     seed=args.seed,
     memory_save = args.memory_save,
     admm_solve_type='cg',
-    cg_max_iters=10,
+    cg_max_iters=cg_max_iters,
     cg_eps=1e-6,
     cg_preconditioner='jacobi',
 )
@@ -152,7 +152,7 @@ nys_optimizer_config = dict(
     seed=args.seed,
     memory_save = args.memory_save,
     admm_solve_type='cg',
-    cg_max_iters=10,
+    cg_max_iters=cg_max_iters,
     cg_eps=1e-6,
     cg_preconditioner='nystrom',
 )

@@ -185,7 +185,8 @@ def admm_optimizer(parms: ADMM_Params,
     # optimal if primal and dual conditions all within tolerance
     def check_optimal():
         not_optimal = True
-        if (np.array([u_v_dist,u_optimality,v_optimality]) <= parms.optimality_tolerance).all():
+        tol = parms.optimality_tolerance
+        if u_v_dist <= tol and u_optimality <= tol and v_optimality <= tol:
             not_optimal = False
         return not_optimal
 
