@@ -208,7 +208,7 @@ def admm_optimizer(parms: ADMM_Params,
             parms.rho += parms.rho_increment
             
         time_u += perf_counter() - start
-        iteration_time += time_u
+        iteration_time += perf_counter() - start
 
         # ----------- OTHER PARAMETER UPDATES -----------------
         # upates on v = (v1...vP, w1...wP) via prox operator
@@ -223,21 +223,21 @@ def admm_optimizer(parms: ADMM_Params,
             v[0] = proxl2(u[0] + lam[0], beta=parms.beta, gamma=1 / parms.rho)
             v[1] = proxl2(u[1] + lam[1], beta=parms.beta, gamma=1 / parms.rho)
         time_v += perf_counter() - start
-        iteration_time += time_v
+        iteration_time += perf_counter() - start
 
         # updates on s = (s1...sP, t1...tP)
         start = perf_counter()
         Gu = OPS.G_multop(u)
         s = mnp.relu(Gu + nu)
         time_s += perf_counter() - start
-        iteration_time += time_s
+        iteration_time += perf_counter() - start
 
         # finally, perform dual updates on lam=(lam11...lam2P), nu=(nu11...nu2P)
         start = perf_counter()
         lam += (u - v) * parms.gamma_ratio
         nu += (Gu - s) * parms.gamma_ratio
         time_dual += perf_counter() - start
-        iteration_time += time_dual
+        iteration_time += perf_counter() - start
 
         # calculations for checking optimality conditions
         y_hat = OPS.F_multop(u)
