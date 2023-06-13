@@ -73,7 +73,7 @@ def parse_args():
     return args
 
 args = parse_args()
-cg_max_iters = 50
+cg_max_iters = 10
 # ----------- Data parameters ------------
 
 # ----------- Decide which optimizer methods to generate (at least one below must be "True") -----------
