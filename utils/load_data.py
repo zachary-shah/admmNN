@@ -200,3 +200,58 @@ def load_cifar(dataset_rel_path = join('datasets', 'cifar-10-batches-py'),
         test_X = (test_X - X_mean) / (X_std + 1e-10)
     return training_X, training_y, test_X, test_y
 
+# preprocess the already loaded CIFAR10
+def preprocess_cifar10(X_train=[], 
+                     X_test=[], 
+                     Y_train=[], 
+                     Y_test=[], 
+                     n_train=10000,
+                     n_test=1000, 
+                     downsample=False, 
+                     binary_classes=True,
+                     stride=3, 
+                     normalize=True):
+    
+    assert not (len(X_train) == 0 or len(X_test) == 0 or len(Y_train) == 0 or len(Y_test) == 0), "Must provide valid train/test CIFAR data. Retrieve using (X_train,Y_train),(X_test,Y_test) = keras.datasets.cifar10.load_data()"
+
+    # limit classes only to class 0 and 1
+    if binary_classes:
+        training_mask = (Y_train == 0) | (Y_train == 1)
+        training_mask = training_mask.flatten()
+        X_train = X_train[training_mask, :, :, :]
+        Y_train = np.sign(Y_train[training_mask] - 0.5)
+
+        test_mask = (Y_test == 0) | (Y_test == 1)
+        test_mask = test_mask.flatten()
+        X_test = X_test[test_mask, :]
+        Y_test = np.sign(Y_test[test_mask] - 0.5)
+
+    # downsample images to 1/stride of their pixels
+    if downsample:
+        dim = ceil(32 / stride)
+        X_train_proc = np.zeros([Y_train.size, 3 * (dim ** 2)])
+        for i in range(Y_train.size):
+            x = X_train[i, :][::stride, ::stride, :]
+            X_train_proc[i, :] = x.reshape(3 * (dim ** 2))
+
+        X_test_proc = np.zeros([Y_test.size, 3 * (dim ** 2)])
+        for i in range(Y_test.size):
+            x = X_test[i, :][::stride, ::stride, :]
+            X_test_proc[i, :] = x.reshape(3 * (dim ** 2))
+    else:
+        X_train_proc = X_train.reshape(3 * 32**2)
+        X_test_proc = X_test.reshape(3 * 32**2)
+
+    X_train_proc = X_train_proc[:n_train, :]
+    Y_train = Y_train[:n_train]
+
+    X_test_proc = X_test_proc[:n_test, :]
+    Y_test = Y_test[:n_test]
+
+    if normalize:
+        X_mean, X_std = X_train_proc.mean(), X_train_proc.std()
+        X_train_proc = (X_train_proc - X_mean) / (X_std + 1e-10)
+        X_test_proc = (X_test_proc - X_mean) / (X_std + 1e-10)
+
+    return X_train_proc, Y_train.squeeze(), X_test_proc, Y_test.squeeze()
+

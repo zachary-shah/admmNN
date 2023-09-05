@@ -124,9 +124,9 @@ class ADMM_Params():
         # basic parameters
         self.loss_type = validate_param(loss_type, "loss_type", "mse", value_list=OPTIM_LOSSES)
         self.optimality_tolerance = validate_param(optimality_tolerance, "optimality_tolerance", 1e-3)
-        self.bias = validate_param(bias, "bias", True)
+        self.bias = validate_param(bias, "bias", True, value_list=[False, True])
         self.memory_save = validate_param(memory_save, "memory_save", False)
-        self.d = num_features + int(bias)
+        self.d = num_features + int(self.bias)
         self.P_S = P_S
 
         # backend information
