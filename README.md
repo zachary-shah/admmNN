@@ -1,55 +1,33 @@
-# baADMM
+# ADMM-based Neural Networks
 Convex Reformulation of ANN ReLU problem with GPU Acceleration 
 
-### UPDATED REPO STRUCTURE 
+## Overview
 
-Repo now has the following improvements implemented: 
-- one ADMM solver for ADMM and xADMM-RBCD
-- ADMM_Params object to abstract away parameters from end-state
-- mnp library to provide backend flexibility for math operations
-- typing hints for all functions
+We demonstrate a scalable reformulation of the non-convex training landscape of a ReLU-activated neural network as a convex optimization problem solved with variants of the Alternating Direction Method of Multipliers (ADMM) algorithm. This is a significant step towards achieving globally optimal interpretable results. We examine three practical ADMM based methods for solving this reformulated problem, and examine their performance with GPU acceleration on PyTorch and JAX. In order to meliorate the expensive primal step bottleneck of ADMM, we incorporate a randomized block-coordinate descent (RBCD) variant. We also experiment with NysADMM, which treats the primal update step as a linear solve with a randomized low-rank Nystrom approximation. This project examines the scalability and acceleration of these methods, in order to encourage applications across a wide range of statistical learning settings. Results show promising directions for scaling ADMM with accelerated GPU techniques to optimize two-layer neural networks.
 
+## Further Reading
 
-Things still to-do to validate repo: 
-- [x] Rewrite test_mnist.py to work with new runner config - Zach
-- [ ] Finish docs - Zach
-     - [ ] relu_solver.py docs
-     - [ ] optimizers.py docs
-     - [ ] 
-- [x] Validate numpy backend
-- [x] Validate torch backend - Miria
-- [x] Validate jax backend
-    - [ ] Implement full jax backend (only added function wrappers) - Miria
-- [x] Implement ADMM CG - Daniel 
-    - [x] Add appropriate parameters for CG / PCG in utils.admm_utils.ADMM_Params
-    - [x] Implement CG / PCG in utils.primal_update_utils.ADMM_cg_update()
+This work and relevant citations are summarized in a paper located in the ```testing``` folder.
 
-### Todo List
+## Use
 
-Zach Todo List (Due Sunday)
-- [x] Read Paper Sections 3 (up to 3.2.2): [Efficient Global Optimization of Two-layer ReLU Networks: Quadratic-time
-Algorithms and Adversarial Training](https://arxiv.org/pdf/2201.01965.pdf)
-- [x] Implement Algo 3.1 of Paper (Approximate ADMM solver)
+An example of use of the optimizer is shown in ```tutorial_runner.ipynb```.
 
-Todo List (Due Wednesday Night)
-- [x] Fix zach's bad baby optimizer to match results of baseline
-- [x] Read Paper Sections 3 (up to 3.2.2): [Efficient Global Optimization of Two-layer ReLU Networks: Quadratic-time
-Algorithms and Adversarial Training](https://arxiv.org/pdf/2201.01965.pdf)
-- [x] Implement Baby SCNN to get baseline
+For a full description of the ```CReLU_MLP``` (Convex ReLU-Activated Multi-layer Perceptron) Optimization class, see ```relu_solver.py```.
 
-Before Midterm Report (4/15)
-- [x] Test against PyTorch on problem with known exact solution (MNIST subset with 100% accuracy easy and possible) *Due Sunday*
-- [ ] Improve time complexity of Ax = b
-    - [x] Try other pre-conditioners besides Cholesky for linear sys solving (Miria)
-    - [x] Conjugate Gradient steps to solve (Daniel) 
-- [x] Summarize results in midterm writeup 
+## Supported Optimization Methods
 
-For Final Project 
-- [ ] GPU Acceleration
-    - [ ] Hook up to JAX
-    - [ ] Perf tests to demonstrate speedup 
-- [ ] Test exact and approximate ADMM solvers against more baselines (CVX, scnn-fista, PyTorch)
-- [ ] Scale problem to CIFAR-10 classification, test against baselines
-- [ ] Test for other problems with structure, where numerical acceleration may be possible and present 
+This optimizer supports the following backends to train a 2-layer ReLU Network: 
 
+- Numpy (cpu)
+- Torch (cpu, gpu)
+- JAX (cpu, gpu)
+
+The primal update step of ADMM involves a large linear solve. By default, the optimizer will solve this system with a Cholseky decomposition, but this is unstable for high data dimensions. We support the following methods to approximate this linear solve for memory efficiency: 
+
+- RBCD (randomized block coordinate descent)
+- CG (Conjugate Gradient)
+- PCG (Preconditioned Conjugate Gradient) with Conidioners:
+    - Diagonal (Jacobi-PCG)
+    - Nystrom (NysADMM)
 

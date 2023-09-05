@@ -187,7 +187,7 @@ class CReLU_MLP():
         # prediction using weights for equivalent nonconvex problem
         y_hat = mnp.relu(X @ self.u) @ self.alpha
 
-        return y_hat
+        return convert_backend_type(y_hat, target_backend='numpy')
     
     """
     Get training metrics from solver
@@ -214,7 +214,7 @@ class CReLU_MLP():
         X = convert_backend_type(X, self.datatype_backend, device=self.device)
 
         # add bias term to data if desired
-        if self.bias:
+        if self.parms.bias:
             X = mnp.hstack([X, mnp.ones((X.shape[0],1), backend_type=self.datatype_backend, device=self.device)])
 
         # convert labels if provided

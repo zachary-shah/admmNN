@@ -114,7 +114,7 @@ def admm_optimizer(parms: ADMM_Params,
     # Hyperplanes
     if verbose: print("  Sampling hyperplane cuts (D_h matrices)...")
     d_diags = get_hyperplane_cuts(X, P_S, seed=parms.seed)
-    print(f"\td_diags.shape: {d_diags.shape}")
+    if verbose: print(f"\td_diags.shape: {d_diags.shape}")
 
     # utility operator to memory-efficient compute F*u and G*u
     OPS = FG_Operators(d_diags=d_diags, X=X, rho=parms.rho, mem_save=parms.memory_save)
@@ -270,11 +270,11 @@ def admm_optimizer(parms: ADMM_Params,
         iteration_time = 0
 
         if total_time > max_time:
-            print(f"Warning: Solve time ({total_time}s) has exceeded max time of {max_time}s. Optimization not guranteed.")
+            if verbose: print(f"Warning: Solve time ({total_time}s) has exceeded max time of {max_time}s. Optimization not guranteed.")
             break
 
         if k == max_iter:
-            print(f"Warning: Reached max iteration count of {k}. Optimization not guranteed.")
+            if verbose: print(f"Warning: Reached max iteration count of {k}. Optimization not guranteed.")
             break
 
         # iter step 
