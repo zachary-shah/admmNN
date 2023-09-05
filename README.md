@@ -7,7 +7,7 @@ We demonstrate a scalable reformulation of the non-convex training landscape of 
 
 ## Further Reading
 
-This work and relevant citations are summarized in a paper located in the ```testing``` folder.
+This work and relevant citations are summarized in a paper located in the ```writing``` folder.
 
 ## Use
 
